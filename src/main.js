@@ -14,6 +14,9 @@ const LIFETIME_KEY = "cc_lifetime_compares_v1";
 const TRIAL_KEY = "cc_trial_until_v1";
 const INSIGHT_KEY = "cc_insight_rewarded_v1";
 
+// Auth UX key (remember last email typed)
+const LAST_EMAIL_KEY = "cc_last_auth_email_v1";
+
 const state = {
   route: routeFromHash(),
   mode: "assets",
@@ -62,6 +65,26 @@ function markFirstCompareDone() {
   state.firstCompareDone = true;
   try {
     localStorage.setItem(FIRST_KEY, "1");
+  } catch {
+    // ignore
+  }
+}
+
+/* ---------- Auth email memory helpers ---------- */
+
+function loadLastAuthEmail() {
+  try {
+    return localStorage.getItem(LAST_EMAIL_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function saveLastAuthEmail(email) {
+  try {
+    const clean = String(email || "").trim();
+    if (!clean) localStorage.removeItem(LAST_EMAIL_KEY);
+    else localStorage.setItem(LAST_EMAIL_KEY, clean);
   } catch {
     // ignore
   }
@@ -315,20 +338,45 @@ function applySavedView(viewId) {
 function openAuthModal() {
   const m = document.getElementById("authModal");
   if (!m) return;
+
   m.classList.add("show");
 
+  // Always reset mode to login on open (your toggle can still switch it)
   setAuthMode("login");
 
   const emailInput = document.getElementById("authEmail");
-  if (emailInput && !emailInput.value && state.user?.email) {
-    emailInput.value = state.user.email;
+  const passInput = document.getElementById("authPass");
+  const status = document.getElementById("authStatus");
+
+  if (status) status.textContent = "";
+
+  // Prefer: logged-in email -> last typed email -> blank
+  const last = loadLastAuthEmail();
+  const preferred = (state.user?.email || last || "").trim();
+
+  if (emailInput) {
+    // Don't override if already typed (e.g. reopen without closing)
+    if (!emailInput.value) emailInput.value = preferred;
+
+    // Focus after paint so it cooperates with modal animations
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        // Tiny polish:
+        // - If there's already an email, jump them straight to password.
+        // - Otherwise focus + select email for fast typing.
+        const hasEmail = !!emailInput.value.trim();
+
+        if (!hasEmail) {
+          emailInput.focus();
+          emailInput.select();
+        } else {
+          passInput?.focus();
+        }
+      }, 60);
+    });
   }
 
-  const passInput = document.getElementById("authPass");
   if (passInput) passInput.value = "";
-
-  const status = document.getElementById("authStatus");
-  if (status) status.textContent = "";
 }
 
 function closeAuthModal() {
@@ -374,6 +422,9 @@ async function submitAuth() {
     if (status) status.textContent = "Please enter email + password.";
     return;
   }
+
+  // Persist last typed email (nice UX even if auth fails)
+  saveLastAuthEmail(email);
 
   if (status) status.textContent = "Working…";
 
@@ -498,6 +549,14 @@ function wireGlobal() {
 
   const authEmail = document.getElementById("authEmail");
   const authPass = document.getElementById("authPass");
+
+  // Remember last typed email (input + blur)
+  if (authEmail) {
+    authEmail.addEventListener("input", (e) => saveLastAuthEmail(e.target.value));
+    authEmail.addEventListener("blur", (e) => saveLastAuthEmail(e.target.value));
+  }
+
+  // Enter-to-submit
   [authEmail, authPass].forEach((el) => {
     if (!el) return;
     el.addEventListener("keydown", (e) => {
@@ -1150,7 +1209,9 @@ function showCapHitInline(limit) {
 
 function wireModals() {
   document.getElementById("closeLimit")?.addEventListener("click", hideLimitModal);
-  document.getElementById("goPricingFromLimit")?.addEventListener("click", () => (location.hash = "#pricing"));
+  document
+    .getElementById("goPricingFromLimit")
+    ?.addEventListener("click", () => (location.hash = "#pricing"));
   document.getElementById("resetDemo")?.addEventListener("click", () => {
     resetDemoUsage();
     hideLimitModal();
@@ -1158,11 +1219,15 @@ function wireModals() {
   });
 
   document.getElementById("closeInsights")?.addEventListener("click", hideInsightsModal);
-  document.getElementById("goPricingFromInsights")?.addEventListener("click", () => (location.hash = "#pricing"));
+  document
+    .getElementById("goPricingFromInsights")
+    ?.addEventListener("click", () => (location.hash = "#pricing"));
   document.getElementById("createAlert")?.addEventListener("click", () => (location.hash = "#pricing"));
 
   document.getElementById("closeExchange")?.addEventListener("click", hideExchangeModal);
-  document.getElementById("goPricingFromExchange")?.addEventListener("click", () => (location.hash = "#pricing"));
+  document
+    .getElementById("goPricingFromExchange")
+    ?.addEventListener("click", () => (location.hash = "#pricing"));
 
   document.getElementById("closeEmailInsight")?.addEventListener("click", closeEmailInsightModal);
   document.getElementById("sendInsightEmail")?.addEventListener("click", handleSendInsightEmail);

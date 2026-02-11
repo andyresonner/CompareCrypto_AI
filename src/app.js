@@ -11,7 +11,7 @@ export function App(state) {
   else if (route === "reset") page = ResetPasswordPage(state);
   else page = ComparePage(state);
 
-  return `${page}${Footer()}${AuthModal()}`;
+  return `${page}${Footer()}${AuthModal(state)}`;
 }
 
 /* ---------- Top Nav ---------- */
@@ -265,7 +265,7 @@ function DashboardPage(state) {
             </div>
             <div class="pageActions">
               <button class="btnAlt" id="clearSavedBtn">Clear saved views</button>
-              <button class="btn" id="goPremiumBtn">Unlock Premium Signals</button>
+              <button class="btn" id="goPremiumBtn">Unlock Premium Edge</button>
             </div>
           </div>
 
@@ -301,26 +301,10 @@ function DashboardPage(state) {
           <div class="dashTease">
             <div class="dashTeaseTitle">What you unlock with Premium</div>
             <div class="dashTeaseGrid">
-              ${TeaseTile(
-                "Saved dashboards",
-                "Pin your best setups as live dashboards you can reopen in one click.",
-                "📊"
-              )}
-              ${TeaseTile(
-                "Arbitrage alerts",
-                "Get a heads up when spreads spike on your favorite exchanges.",
-                "⚡"
-              )}
-              ${TeaseTile(
-                "Community Prediction",
-                "Direction + confidence overlays from active traders.",
-                "🧠"
-              )}
-              ${TeaseTile(
-                "AI Trading Bot (beta)",
-                "Yearly plan unlocks experimental automated strategies.",
-                "🤖"
-              )}
+              ${TeaseTile("Saved dashboards", "Pin your best setups as live dashboards you can reopen in one click.", "📊")}
+              ${TeaseTile("Arbitrage alerts", "Get a heads up when spreads spike on your favorite exchanges.", "⚡")}
+              ${TeaseTile("Community Prediction", "Direction + confidence overlays from active traders.", "🧠")}
+              ${TeaseTile("AI Trading Bot (beta)", "Yearly plan unlocks experimental automated strategies.", "🤖")}
             </div>
           </div>
         </div>
@@ -394,7 +378,7 @@ function AccountPage(state) {
               <ul>
                 <li>We only store your email + hashed password for auth.</li>
                 <li>Usage metrics (compares, saves) are anonymous aggregates.</li>
-                <li>No trading or exchange API keys are stored in this MVP.</li>
+                <li>No trading or exchange API keys are stored at this stage.</li>
               </ul>
               <div class="muted small">Crypto is risky; use this as decision support, not advice.</div>
             </div>
@@ -455,7 +439,7 @@ function PricingPage(state) {
     : 0;
 
   const trialBanner = trialActive
-    ? `<div class="trialBanner">You’re on a 2‑day Premium trial. Enjoy unlimited compares and signals for the next ${trialDaysLeft} day${
+    ? `<div class="trialBanner">You’re on a 2-day Premium trial. Enjoy unlimited compares and signals for the next ${trialDaysLeft} day${
         trialDaysLeft > 1 ? "s" : ""
       }.</div>`
     : "";
@@ -465,8 +449,8 @@ function PricingPage(state) {
         ${TopNav(state)}
         <div class="wrap">
           <div class="pricingHero">
-            <div class="kicker jumbo">Unlock Premium Signals</div>
-            <div class="muted">Turn quick compares into a real edge with alerts, saved dashboards, deeper exchange insights, and community prediction overlays.</div>
+            <div class="kicker jumbo">Unlock Premium Edge</div>
+            <div class="muted">Turn quick compares into an unfair advantage: live conviction tracking, shift alerts, deeper exchange intel, and AI overlays.</div>
             ${trialBanner}
           </div>
 
@@ -564,7 +548,7 @@ function LimitModal() {
           </div>
 
           <div class="modalCtas">
-            <button class="ctaWide" id="goPricingFromLimit">Unlock Premium Signals</button>
+            <button class="ctaWide" id="goPricingFromLimit">Unlock Premium Edge</button>
             <button class="ghostWide" id="resetDemo">Reset demo usage</button>
           </div>
 
@@ -580,8 +564,8 @@ function InsightsModal() {
         <div class="modal big">
           <div class="modalTop">
             <div>
-              <div class="modalTitle" id="insTitle">Community Insights</div>
-              <div class="muted" id="insSubtitle">Sentiment + risk snapshot</div>
+              <div class="modalTitle" id="insTitle">Community Insight</div>
+              <div class="muted" id="insSubtitle">Live crowd conviction + momentum snapshot</div>
             </div>
             <button class="x" id="closeInsights">✕</button>
           </div>
@@ -589,16 +573,18 @@ function InsightsModal() {
           <div class="insBadges" id="insBadges"></div>
           <div class="insList" id="insBullets"></div>
 
-          <div class="noteBox" style="margin:8px 6px 0;">
-            <div class="muted small">Premium unlocks prediction shifts, saved dashboards, and alert triggers for your top coins.</div>
+          <div class="noteBox" style="margin:10px 6px 0;">
+            <div class="muted small" style="line-height:1.35;">
+              <b>Premium edge:</b> Get early shift alerts when the crowd flips, track conviction over time, and unlock AI “what’s next” overlays.
+            </div>
           </div>
 
           <div class="modalCtas">
-            <button class="ghostWide" id="createAlert">Create alert</button>
-            <button class="ctaWide" id="goPricingFromInsights">Unlock Premium Signals</button>
+            <button class="ghostWide" id="createAlert">Set an alert</button>
+            <button class="ctaWide" id="goPricingFromInsights">Unlock Premium Edge</button>
           </div>
 
-          <div class="finePrint">Insight is community-based and for decision support — not financial advice.</div>
+          <div class="finePrint">Community-based decision support — not financial advice.</div>
         </div>
       </div>
     `;
@@ -611,33 +597,33 @@ function ExchangeInsightModal() {
           <div class="modalTop">
             <div>
               <div class="modalTitle" id="exTitle">Exchange Insight</div>
-              <div class="muted">Premium-only: offers, deeper sentiment, partner perks.</div>
+              <div class="muted">Compare exchanges like a pro — perks, pitfalls, and what traders actually care about.</div>
             </div>
             <button class="x" id="closeExchange">✕</button>
           </div>
 
           <div class="exImpact">
             <div class="impactCard good">
-              <div class="impactHdr">What traders like</div>
+              <div class="impactHdr">Why traders pick it</div>
               <ul>
-                <li>Deep liquidity on majors</li>
-                <li>Fast execution</li>
-                <li>Feature-rich product suite</li>
+                <li>Liquidity + execution quality on majors</li>
+                <li>Feature depth (spot, perps, earn, etc.)</li>
+                <li>Tools that suit active trading</li>
               </ul>
             </div>
 
             <div class="impactCard watch">
-              <div class="impactHdr">Things to consider</div>
+              <div class="impactHdr">Watch-outs</div>
               <ul>
-                <li>Region restrictions</li>
-                <li>Fees vary by tier/volume</li>
-                <li>Interface preference differs</li>
+                <li>Region availability + restrictions</li>
+                <li>Fee tiers vary by volume</li>
+                <li>UI/UX preference matters more than people admit</li>
               </ul>
             </div>
           </div>
 
           <div class="partnerStrip">
-            <div class="muted">Partner offers</div>
+            <div class="muted">Premium perks</div>
             <div class="partnerPills">
               <span class="pillLite">Fee discounts</span>
               <span class="pillLite">Signup bonuses</span>
@@ -647,10 +633,10 @@ function ExchangeInsightModal() {
           </div>
 
           <div class="modalCtas">
-            <button class="ctaWide" id="goPricingFromExchange">Unlock Community Insight</button>
+            <button class="ctaWide" id="goPricingFromExchange">Unlock Premium Perks</button>
           </div>
 
-          <div class="finePrint">We'll wire real partner links once we pick the affiliate stack. For now this is the product flow.</div>
+          <div class="finePrint">Partner links will appear here once the affiliate stack is connected.</div>
         </div>
       </div>
     `;
@@ -701,39 +687,150 @@ function EmailInsightModal() {
     `;
 }
 
-/* ---------- Auth modal ---------- */
+/* ---------- Auth modal (REVISED to be more visual, less text-heavy) ---------- */
 
-function AuthModal() {
+function AuthModal(state) {
+  const compares = state?.lifetimeCompares || 0;
+  const points = compares * 10;
+  const streakDays = state?.streak?.days || 0;
+
+  const nextRewardAt = 10;
+  const untilReward = Math.max(0, nextRewardAt - compares);
+  const pct = Math.max(0, Math.min(100, Math.round((compares / nextRewardAt) * 100)));
+
+  const progressCopy =
+    compares >= nextRewardAt
+      ? "Free insight unlocked — log in to claim it."
+      : `Get a free insight in ${untilReward} compare${untilReward === 1 ? "" : "s"}.`;
+
   return `
       <div class="modalBackdrop" id="authModal">
         <div class="modal big">
+
           <div class="modalTop">
             <div>
-              <div class="modalTitle" id="authTitle">Login</div>
-              <div class="muted" id="authSubtitle">Use email + password.</div>
+              <div class="modalTitle" id="authTitle">Unlock your edge</div>
+              <div class="muted" id="authSubtitle">${progressCopy}</div>
             </div>
             <button class="x" id="closeAuth">✕</button>
           </div>
 
-          <div class="insList">
-            <div class="bullet">
-              <div class="muted small">Email</div>
-              <input class="input" id="authEmail" placeholder="you@domain.com" />
-            </div>
-            <div class="bullet" style="margin-top:10px;">
-              <div class="muted small">Password</div>
-              <input class="input" id="authPass" type="password" placeholder="••••••••" />
+          <!-- Two-column layout without new CSS classes -->
+          <div style="
+            display:grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 12px;
+            padding: 10px 4px 0;
+          ">
+
+            <!-- LEFT: rewards/value (more visual) -->
+            <div>
+
+              <!-- Progress bar card -->
+              <div class="bullet" style="margin-top:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                  <div>
+                    <div class="muted small">Reward progress</div>
+                    <div style="font-weight:900; margin-top:2px;">Free Insight Unlock</div>
+                  </div>
+                  <div style="font-weight:900;">${pct}%</div>
+                </div>
+
+                <div style="
+                  margin-top:10px;
+                  height:10px;
+                  border-radius:999px;
+                  border:1px solid rgba(148,163,184,.55);
+                  background: rgba(9,13,32,.96);
+                  overflow:hidden;
+                ">
+                  <div style="
+                    height:100%;
+                    width:${pct}%;
+                    background: linear-gradient(90deg, rgba(0,212,255,.85), rgba(168,85,255,.70));
+                  "></div>
+                </div>
+
+                <div class="muted small" style="margin-top:8px;">
+                  ${compares >= nextRewardAt ? "Unlocked — log in and we’ll show your preview." : `Run ${untilReward} more compare${untilReward === 1 ? "" : "s"} to unlock.`}
+                </div>
+              </div>
+
+              <!-- Stats pills -->
+              <div class="perkRow" style="padding:10px 0 0;">
+                <div class="perk">Points: <b style="margin-left:6px;">${points}</b></div>
+                <div class="perk">Streak: <b style="margin-left:6px;">${streakDays}d</b></div>
+                <div class="perk">Total compares: <b style="margin-left:6px;">${compares}</b></div>
+              </div>
+
+              <!-- Value tiles -->
+              <div style="margin-top:8px;">
+                <div class="bullet" style="margin-top:8px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:18px;">💾</div>
+                    <div>
+                      <div style="font-weight:900;">Save dashboards</div>
+                      <div class="muted small" style="margin-top:2px;">Reopen your best setups in one click.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bullet" style="margin-top:8px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:18px;">⚡</div>
+                    <div>
+                      <div style="font-weight:900;">Earn rewards</div>
+                      <div class="muted small" style="margin-top:2px;">Streaks unlock trials + insight previews.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bullet" style="margin-top:8px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:18px;">🧠</div>
+                    <div>
+                      <div style="font-weight:900;">Premium signals later</div>
+                      <div class="muted small" style="margin-top:2px;">Alerts, prediction overlays, exchange intel.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="finePrint" style="padding-left:0; padding-right:0;">
+                Traders use CompareCrypto.ai to scan spreads + sentiment fast — then save the winners.
+              </div>
             </div>
 
-            <div class="muted small" id="authStatus" style="margin-top:12px;"></div>
+            <!-- RIGHT: form -->
+            <div>
+              <div class="insList" style="padding:0;">
+                <div class="bullet" style="margin-top:0;">
+                  <div class="muted small">Email</div>
+                  <input class="input" id="authEmail" placeholder="you@domain.com" />
+                </div>
 
-            <div class="modalCtas" style="margin-top:14px;">
-              <button class="ctaWide" id="authSubmitBtn">Continue</button>
-              <button class="ghostWide" id="toggleAuthModeBtn" data-mode="login">Create an account instead</button>
+                <div class="bullet" style="margin-top:10px;">
+                  <div class="muted small">Password</div>
+                  <input class="input" id="authPass" type="password" placeholder="••••••••" />
+                </div>
+
+                <div class="muted small" id="authStatus" style="margin-top:12px;"></div>
+
+                <div class="modalCtas" style="margin-top:14px;">
+                  <button class="ctaWide" id="authSubmitBtn">Continue</button>
+                  <button class="ghostWide" id="toggleAuthModeBtn" data-mode="login">New here? Create a free account</button>
+                </div>
+
+                <div class="finePrint">
+                  No spam. Just account + product updates. You can delete your account any time.
+                </div>
+              </div>
             </div>
 
-            <div class="finePrint">MVP auth. We'll harden UX + password rules later.</div>
           </div>
+
+          <!-- Simple mobile stacking -->
+          <div style="display:none;" aria-hidden="true"></div>
         </div>
       </div>
     `;
