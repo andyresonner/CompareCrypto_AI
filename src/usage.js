@@ -54,9 +54,3 @@ export function remainingComparisons() {
   const u = getUsage();
   return Math.max(0, u.freeLimit - u.used);
 }
-
-export function resetDemoUsage() {
-  const reset = { day: todayKey(), used: 0, freeLimit: 3 };
-  localStorage.setItem(KEY, JSON.stringify(reset));
-  return reset;
-}

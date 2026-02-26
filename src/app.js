@@ -9,9 +9,11 @@ export function App(state) {
   else if (route === "waitlist") page = WaitlistPage(state);
   else if (route === "account") page = AccountPage(state);
   else if (route === "reset") page = ResetPasswordPage(state);
+  else if (route.startsWith("intel/")) page = IntelArticlePage(state);
+  else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
 
-  return `${page}${Footer()}${AuthModal(state)}`;
+  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}`;
 }
 
 /* ---------- Top Nav ---------- */
@@ -105,7 +107,7 @@ function TopNav(state) {
     `;
 }
 
-/* ---------- Compare page ---------- */
+/* ---------- Compare page (refined hero + clearer UX) ---------- */
 
 function ComparePage(state) {
   const mode = state.mode || "assets";
@@ -116,8 +118,8 @@ function ComparePage(state) {
 
   const modeLabel =
     mode === "assets"
-      ? "Assets • compare coins side-by-side"
-      : "Exchanges • scan where to trade this asset";
+      ? "Assets mode: rank coins by momentum and conviction."
+      : "Exchanges mode: find the best venue to execute.";
 
   const modeRow = `
       <div class="modeRow">
@@ -128,9 +130,14 @@ function ComparePage(state) {
           </div>
           <div class="muted small" style="margin-top:4px;">${modeLabel}</div>
         </div>
+        <div class="sponsorSlotWrap">
+          <button class="sponsorSlot" id="sponsorSlotBtn" title="Sponsored placements coming soon">
+            Sponsored by Binance
+          </button>
+        </div>
         <div class="usageLine">
           <div class="usagePill ${bumped ? "usagePulse" : ""}">
-            <span class="muted">Daily Free Comparisons</span>
+            <span class="muted">Daily free comparisons</span>
             <span class="usageCount"><b>${used}</b>/<b>${limit}</b></span>
           </div>
         </div>
@@ -140,74 +147,91 @@ function ComparePage(state) {
 
   const chips =
     mode === "assets"
-      ? ["BTC", "ETH", "SOL", "ADA", "DOGE", "DOT"]
-      : ["Coinbase", "Kraken", "Binance", "Bybit", "OKX", "Bitstamp", "KuCoin"];
+      ? ["BTC", "ETH", "SOL", "ADA", "DOGE", "XRP", "AVAX", "LINK", "PEPE", "BONK"]
+      : ["Coinbase", "Kraken", "Binance", "Bybit", "OKX", "Bitstamp", "KuCoin", "Gemini", "Gate.io", "MEXC"];
 
   const placeholder =
     mode === "assets"
-      ? "Search (e.g. BTC, ETH, Solana)…"
-      : "Type an asset to price across exchanges (e.g. BTC)…";
+      ? "Search any coin/token (e.g. BTC, ETH, SOL, XRP, AVAX, LINK, PEPE, BONK)…"
+      : "Type a coin/token (BTC, ETH, SOL, PEPE) OR exchange names (Binance, Coinbase)…";
 
-  const sponsorPill = `
-      <div class="sponsorPill" title="Affiliate partner">
-        <span class="muted">Market intel powered by</span>
+  const sourcePill = `
+      <div class="sponsorPill">
+        <span class="muted">Market partner</span>
         <span class="dotSep">•</span>
-        <a class="logoPill" href="https://www.binance.com" target="_blank" rel="noreferrer">BINANCE</a>
+        <span class="logoPill logoPillImg">
+          <img src="/binance-logo.svg" alt="Binance" />
+        </span>
       </div>
     `;
-
-  const firstStrip =
-    state.firstCompareDone
-      ? ""
-      : `
-        <div class="firstStrip" id="firstStrip">
-          <div class="firstStripLabel">Getting started</div>
-          <div class="firstSteps">
-            <button class="firstStep" id="firstStep1">
-              <span class="firstNum">1</span>
-              <span>Click a coin chip</span>
-            </button>
-            <button class="firstStep" id="firstStep2">
-              <span class="firstNum">2</span>
-              <span>Add 2+ items</span>
-            </button>
-            <button class="firstStep" id="firstStep3">
-              <span class="firstNum">3</span>
-              <span>Press Compare</span>
-            </button>
-          </div>
-        </div>
-      `;
 
   return `
       <div class="bg">
         ${TopNav(state)}
         <div class="wrap">
           <div class="hero">
-            <h1 class="headline">Compare <span class="grad">ANYTHING Crypto</span>. Free.</h1>
-            <p class="sub">Spot mispriced coins and exchanges using community sentiment, spreads, and prediction overlays — free in minutes, deeper signals when you upgrade.</p>
+            <h1 class="headline">
+              Compare <span class="grad">ANY crypto</span>.
+            </h1>
+            <p class="sub">
+              Prices, momentum, and best exchange routes on one screen.
+            </p>
+            <div class="heroProof">
+              <span class="heroPill">Live prices</span>
+              <span class="heroPill">24h + 7d momentum</span>
+              <span class="heroPill">Exchange best quote</span>
+              <span class="heroPill">Community ratings</span>
+            </div>
             ${modeRow}
           </div>
 
           <div class="compareCard">
-            <div class="hint">Each click on <b>Compare</b> counts as 1 comparison. You get <b>${limit}</b> free per day.</div>
+            ${state.reopenContext ? ReopenWorkspacePanel(state) : ""}
+
+            <div class="guideRow">
+              <div class="guideStep">
+                <span class="guideNum">1</span>
+                <span>${mode === "assets" ? "Pick 2+ assets" : "Type token or exchange"}</span>
+              </div>
+              <div class="guideStep">
+                <span class="guideNum">2</span>
+                <span>${mode === "assets" ? "Click Compare now" : "Select exchanges to compare"}</span>
+              </div>
+              <div class="guideStep">
+                <span class="guideNum">3</span>
+                <span>Act on the best setup</span>
+              </div>
+            </div>
 
             <div class="rewardToast" id="rewardToast"></div>
 
-            ${firstStrip}
-
             <div class="searchRow">
               <input class="input" id="search" placeholder="${placeholder}" />
-              <button class="btn" id="compareBtn">Compare</button>
-              <button class="btnAlt" id="saveBtn">Save View</button>
+              <button class="cta" id="compareBtn">Compare now</button>
+              <button class="btnAlt" id="saveBtn">Save view</button>
             </div>
 
             <div class="chips" id="chips">
-              ${chips.map((c) => `<button class="chip" data-chip="${c}">+ ${c}</button>`).join("")}
+              ${chips.map((c) => `<button class="chip" data-chip="${c}">+ ${mode === "assets" ? "🪙" : "🏦"} ${c}</button>`).join("")}
+            </div>
+
+            <div class="chips" id="presets" style="margin-top:10px;">
+              ${
+                mode === "assets"
+                  ? `
+                <button class="chip" data-preset="majors">Majors: BTC ETH SOL</button>
+                <button class="chip" data-preset="layer1">Layer 1 basket</button>
+                <button class="chip" data-preset="payments">Payments: XRP XLM LTC</button>
+              `
+                  : `
+                <button class="chip" data-preset="tier1">Tier-1 venues</button>
+                <button class="chip" data-preset="alts">Altcoin-friendly venues</button>
+                <button class="chip" data-preset="global">Global mix</button>
+              `
+              }
             </div>
 
             <div class="selectedRow">
-              <div class="muted">Selected:</div>
               <div class="selectedList" id="selectedList"></div>
             </div>
 
@@ -215,12 +239,15 @@ function ComparePage(state) {
               <div class="resultLine ok">
                 <div class="resultTop">
                   <div class="resultTitle"></div>
-                  ${sponsorPill}
+                  ${sourcePill}
                 </div>
               </div>
 
               <div id="resultBody"></div>
+              <div id="learnPanel"></div>
             </div>
+
+            <div id="editorialStrip"></div>
 
             <div class="savedBlock" id="savedBlock"></div>
           </div>
@@ -229,7 +256,6 @@ function ComparePage(state) {
         ${LimitModal()}
         ${InsightsModal()}
         ${ExchangeInsightModal()}
-        ${EmailInsightModal()}
       </div>
     `;
 }
@@ -238,75 +264,121 @@ function ComparePage(state) {
 
 function DashboardPage(state) {
   const views = state.savedViews || [];
-  const usage = state.usage || { used: 0, freeLimit: 3 };
-  const used = usage.used ?? 0;
-  const limit = usage.freeLimit ?? 3;
   const count = views.length;
-
-  const streak = state.streak || { days: 0, best: 0 };
-  const points = (state.lifetimeCompares || 0) * 10;
-  const trialActive = state.trialUntil && state.trialUntil > Date.now();
-  const trialDaysLeft = trialActive
-    ? Math.max(1, Math.ceil((state.trialUntil - Date.now()) / (24 * 60 * 60 * 1000)))
-    : 0;
-
-  const trialNote = trialActive
-    ? `Trial: ${trialDaysLeft} day${trialDaysLeft > 1 ? "s" : ""} left`
-    : "Use your compares to unlock rewards.";
 
   return `
       <div class="bg">
         ${TopNav(state)}
         <div class="wrap">
-          <div class="pageHdr">
-            <div>
-              <div class="kicker">Dashboard</div>
-              <div class="muted">Saved compares and scans you can reopen in one click when the market moves.</div>
-            </div>
-            <div class="pageActions">
-              <button class="btnAlt" id="clearSavedBtn">Clear saved views</button>
-              <button class="btn" id="goPremiumBtn">Unlock Premium Edge</button>
+          <div class="pageHdr pageHdrDash">
+            <div class="pageActions pageActionsLeft">
+              <button class="btnAlt btnWithIcon" id="dashCompareBtn"><span aria-hidden="true">⚡</span><span>Run a compare</span></button>
+              <button class="btn btnWithIcon" id="goPremiumBtn"><span aria-hidden="true">👑</span><span>Unlock Premium</span></button>
             </div>
           </div>
 
-          <div class="dashMeta">
-            <div class="dashStat">
-              <div class="dashStatLabel">Saved views</div>
-              <div class="dashStatValue">${count}</div>
+          <div class="dashStory">
+            <div class="dashStoryTop">
+              <div class="dashStoryTitle">Why compare crypto before you act?</div>
+              <div class="muted small">This product helps you make faster, better decisions with less guesswork.</div>
             </div>
-            <div class="dashStat">
-              <div class="dashStatLabel">Today’s free compares</div>
-              <div class="dashStatValue">${used}/${limit}</div>
+
+            <div class="dashStoryGrid">
+              <div class="dashStoryCard">
+                <div class="dashStoryK">Pick stronger assets</div>
+                <div class="muted small">Compare 24h and 7d momentum side by side to avoid chasing random moves.</div>
+              </div>
+              <div class="dashStoryCard">
+                <div class="dashStoryK">Get better execution</div>
+                <div class="muted small">Scan exchange price differences so buys and sells happen on better venues.</div>
+              </div>
+              <div class="dashStoryCard">
+                <div class="dashStoryK">Use community sentiment edge</div>
+                <div class="muted small">Combine crowd conviction with momentum so you can spot higher-confidence setups earlier.</div>
+              </div>
             </div>
-            <div class="dashStat">
-              <div class="dashStatLabel">Total compares</div>
-              <div class="dashStatValue">${state.lifetimeCompares || 0}</div>
-              <div class="dashStatNote">${points} points earned</div>
+
+            <div class="dashStoryCtas">
+              <button class="btnMini" id="dashHowBtn">How to use this in 60s</button>
+              ${state.user ? `<button class="btnMiniGhost" id="dashEmailInsightBtn">Get weekly insight email</button>` : `<button class="btnMiniGhost" id="dashSignupBtn">Create free account</button>`}
             </div>
-            <div class="dashStat">
-              <div class="dashStatLabel">Usage streak</div>
-              <div class="dashStatValue">${streak.days || 0} days</div>
-              <div class="dashStatNote">Best: ${streak.best || 0} days in a row</div>
+          </div>
+
+          <div class="marketWindow" id="marketWindow">
+            <div class="marketWindowHead">
+              <div class="dashStoryTitle" style="font-size:18px;">Market Pulse</div>
+              <div class="marketModes">
+                <button class="marketModeBtn active" id="pulseMarketBtn">Markets</button>
+                <button class="marketModeBtn" id="pulseCommunityBtn">Community sentiment</button>
+              </div>
             </div>
-            <div class="dashStat">
-              <div class="dashStatLabel">Premium edge</div>
-              <div class="dashStatNote">${trialNote}</div>
+            <div class="muted small" id="marketPulseNote" style="margin-top:6px;"></div>
+            <div class="marketGrid" id="marketGrid"></div>
+          </div>
+
+          ${DashboardIntelStrip()}
+
+          <div class="savedHdr">
+            <div>
+              <div class="savedTitle">Saved compares</div>
+              <div class="muted small">Open any saved setup and refresh it against live market data.</div>
+            </div>
+            <div class="savedBtns">
+              <button class="btnAlt" id="clearSavedBtn">Clear saved</button>
             </div>
           </div>
 
           <div class="dashGrid">
             ${views.length ? views.map(ViewCard).join("") : EmptyDash()}
           </div>
+        </div>
+      </div>
+    `;
+}
 
-          <div class="dashTease">
-            <div class="dashTeaseTitle">What you unlock with Premium</div>
-            <div class="dashTeaseGrid">
-              ${TeaseTile("Saved dashboards", "Pin your best setups as live dashboards you can reopen in one click.", "📊")}
-              ${TeaseTile("Arbitrage alerts", "Get a heads up when spreads spike on your favorite exchanges.", "⚡")}
-              ${TeaseTile("Community Prediction", "Direction + confidence overlays from active traders.", "🧠")}
-              ${TeaseTile("AI Trading Bot (beta)", "Yearly plan unlocks experimental automated strategies.", "🤖")}
-            </div>
-          </div>
+function DashboardIntelStrip() {
+  const cards = [
+    {
+      source: "Binance Academy",
+      title: "How To Research Altcoins Before You Buy",
+      slug: "how-to-research-altcoins",
+      img: "/intel/cards/how-to-research-altcoins.png",
+    },
+    {
+      source: "CoinDesk",
+      title: "Exchange Execution Playbook: Get Better Fills",
+      slug: "exchange-execution-playbook",
+      img: "/intel/cards/exchange-execution-playbook.png",
+    },
+    {
+      source: "The Block",
+      title: "Community Conviction Framework",
+      slug: "community-conviction-framework",
+      img: "/intel/cards/community-conviction-framework.png",
+    },
+  ];
+
+  return `
+      <div class="newsStrip" style="margin-top:14px;">
+        <div class="newsHdr">
+          <div class="k">Market intel</div>
+          <button class="btnMiniGhost" id="dashIntelBtn">More intel</button>
+        </div>
+        <div class="newsGrid">
+          ${cards
+            .map(
+              (n) => `
+            <a class="newsCard" href="#intel/${n.slug}">
+              <div class="newsImageWrap">
+                <img class="newsImage" src="${escapeHtml(n.img)}" alt="${escapeHtml(n.title)} cover image" />
+              </div>
+              <div class="newsSource">${escapeHtml(n.source)}</div>
+              <div class="newsTitle">${escapeHtml(n.title)}</div>
+              <div class="newsCta">Read article →</div>
+            </a>
+          `
+            )
+            .join("")}
         </div>
       </div>
     `;
@@ -338,7 +410,7 @@ function AccountPage(state) {
               <div class="noteBox" style="margin-top:14px;">
                 <div class="muted small">Points</div>
                 <div style="margin-top:4px; font-weight:800;">${points} points</div>
-                <div class="muted small" style="margin-top:4px;">Earned from total comparisons you’ve run.</div>
+                <div class="muted small" style="margin-top:4px;">Earned from total comparisons you've run.</div>
               </div>
             </div>
 
@@ -365,10 +437,10 @@ function AccountPage(state) {
           <div class="grid2" style="margin-top:14px;">
             <div class="plan">
               <div class="planTitle">Billing</div>
-              <div class="muted small" style="margin-top:4px;">You’re currently on the Free plan.</div>
+              <div class="muted small" style="margin-top:4px;">You're currently on the Free plan.</div>
               <ul>
-                <li>Premium checkout is opening soon.</li>
-                <li>When live, you’ll see your invoices and manage billing here.</li>
+                <li>Choose Monthly or Yearly in the Pricing page.</li>
+                <li>After checkout is connected, invoices and billing controls appear here.</li>
               </ul>
               <button class="btnFull" id="billingManageBtn">See Premium options</button>
             </div>
@@ -439,7 +511,7 @@ function PricingPage(state) {
     : 0;
 
   const trialBanner = trialActive
-    ? `<div class="trialBanner">You’re on a 2-day Premium trial. Enjoy unlimited compares and signals for the next ${trialDaysLeft} day${
+    ? `<div class="trialBanner">You're on a 3-day Premium trial. Enjoy unlimited compares and signals for the next ${trialDaysLeft} day${
         trialDaysLeft > 1 ? "s" : ""
       }.</div>`
     : "";
@@ -450,7 +522,7 @@ function PricingPage(state) {
         <div class="wrap">
           <div class="pricingHero">
             <div class="kicker jumbo">Unlock Premium Edge</div>
-            <div class="muted">Turn quick compares into an unfair advantage: live conviction tracking, shift alerts, deeper exchange intel, and AI overlays.</div>
+            <div class="muted">Stop waiting for tomorrow. Get unlimited compares, arbitrage alerts, and saved dashboards — so you can act when the market moves.</div>
             ${trialBanner}
           </div>
 
@@ -459,34 +531,30 @@ function PricingPage(state) {
               <div class="planTitle">Monthly</div>
               <div class="price">$20<span>/month</span></div>
               <ul>
-                <li>Unlimited comparisons</li>
+                <li><b>Unlimited comparisons</b> — no daily cap</li>
                 <li>Saved views + dashboards</li>
-                <li>Arbitrage alerts</li>
+                <li>Arbitrage alerts when spreads spike</li>
                 <li>Community prediction overlays</li>
               </ul>
               <button class="btnFull" id="checkoutMonthly">Continue to Checkout</button>
             </div>
 
             <div class="plan glow">
-              <div class="save">SAVE $40</div>
+              <div class="save">BEST VALUE — SAVE $40</div>
               <div class="planTitle">Yearly</div>
               <div class="price">$200<span>/year</span></div>
-              <div class="muted small">($16.67/month)</div>
+              <div class="muted small">($16.67/month — 2 months free)</div>
               <ul>
                 <li>Everything in Monthly</li>
                 <li>Priority feature access</li>
                 <li><b>AI Trading Bot access (beta)</b></li>
                 <li>Partner offers + fee discounts</li>
               </ul>
-              <button class="btnFull" id="checkoutYearly">Continue to Checkout</button>
+              <button class="cta btnFull" id="checkoutYearly">Continue to Checkout</button>
             </div>
           </div>
 
-          <div class="noteBox">
-            <div class="muted">
-              Checkout is coming next. For now these buttons route to a waitlist so the product is usable today.
-            </div>
-          </div>
+          
         </div>
       </div>
     `;
@@ -501,12 +569,12 @@ function WaitlistPage(state) {
         ${TopNav(state)}
         <div class="wrap">
           <div class="pricingHero">
-            <div class="kicker jumbo">Premium is opening soon</div>
-            <div class="muted">Drop your email — we'll notify you when checkout goes live.</div>
+            <div class="kicker jumbo">Checkout access list</div>
+            <div class="muted">Drop your email and we'll send you the instant checkout link once connected.</div>
           </div>
 
           <div class="compareCard">
-            <div class="hint">You can still use the free version right now.</div>
+            <div class="hint">The compare product is fully usable now. This form is only for payment launch notice.</div>
 
             <div class="searchRow">
               <input class="input" id="waitlistEmail" placeholder="you@domain.com" value="${escapeHtml(prefill)}" />
@@ -534,22 +602,59 @@ function LimitModal() {
         <div class="modal">
           <div class="modalTop">
             <div>
-              <div class="modalTitle">Want more comparisons?</div>
-              <div class="muted">Unlock unlimited scans, saved dashboards, and premium signals.</div>
+              <div class="modalTitle">You've used your 3 free compares today</div>
+              <div class="muted">Traders who upgrade get unlimited scans — no more waiting until tomorrow.</div>
             </div>
             <button class="x" id="closeLimit">✕</button>
           </div>
 
-          <div class="perkRow">
-            <div class="perk">Unlimited compares</div>
-            <div class="perk">Arbitrage alerts</div>
-            <div class="perk">Saved views + dashboards</div>
-            <div class="perk">Watchlists</div>
+          <div class="insList" style="padding:8px 0;">
+            <div class="bullet">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">∞</span>
+                <div>
+                  <div style="font-weight:700;">Unlimited comparisons</div>
+                  <div class="muted small">Run as many scans as you need — no daily cap.</div>
+                </div>
+              </div>
+            </div>
+            <div class="bullet" style="margin-top:8px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">⚡</span>
+                <div>
+                  <div style="font-weight:700;">Arbitrage alerts</div>
+                  <div class="muted small">Get notified when spreads spike on your tracked exchanges.</div>
+                </div>
+              </div>
+            </div>
+            <div class="bullet" style="margin-top:8px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">📊</span>
+                <div>
+                  <div style="font-weight:700;">Saved dashboards</div>
+                  <div class="muted small">Pin your best setups and reopen them in one click.</div>
+                </div>
+              </div>
+            </div>
+            <div class="bullet" style="margin-top:8px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">🤖</span>
+                <div>
+                  <div style="font-weight:700;">AI Trading Bot access</div>
+                  <div class="muted small">Unlock bot access on Premium plans as this feature rolls out.</div>
+                </div>
+              </div>
+            </div>
           </div>
 
+          <div class="referralBar">
+            <input class="input" id="referralCodeInput" placeholder="Referral code (try: crypto)" />
+            <button class="btnAlt" id="applyReferralCodeBtn">Apply</button>
+          </div>
+          <div class="muted small" id="referralStatus" style="margin-top:8px;"></div>
+
           <div class="modalCtas">
-            <button class="ctaWide" id="goPricingFromLimit">Unlock Premium Edge</button>
-            <button class="ghostWide" id="resetDemo">Reset demo usage</button>
+            <button class="ctaWide" id="goPricingFromLimit">Unlock Premium — $20/mo</button>
           </div>
 
           <div class="finePrint">Insights are community-based and for decision support — not financial advice.</div>
@@ -575,12 +680,12 @@ function InsightsModal() {
 
           <div class="noteBox" style="margin:10px 6px 0;">
             <div class="muted small" style="line-height:1.35;">
-              <b>Premium edge:</b> Get early shift alerts when the crowd flips, track conviction over time, and unlock AI “what’s next” overlays.
+              <b>Premium edge:</b> Get early shift alerts when the crowd flips, track conviction over time, and unlock AI "what's next" overlays.
             </div>
           </div>
 
           <div class="modalCtas">
-            <button class="ghostWide" id="createAlert">Set an alert</button>
+            <button class="ghostWide" id="createAlert">Set alert (2 free with account)</button>
             <button class="ctaWide" id="goPricingFromInsights">Unlock Premium Edge</button>
           </div>
 
@@ -636,7 +741,7 @@ function ExchangeInsightModal() {
             <button class="ctaWide" id="goPricingFromExchange">Unlock Premium Perks</button>
           </div>
 
-          <div class="finePrint">Partner links will appear here once the affiliate stack is connected.</div>
+          <div class="finePrint">Use exchange insights to compare execution quality, fees, and regional availability before funding.</div>
         </div>
       </div>
     `;
@@ -648,60 +753,590 @@ function EmailInsightModal() {
         <div class="modal big">
           <div class="modalTop">
             <div>
-              <div class="modalTitle">Preview: Free Market Insight Email</div>
-              <div class="muted">See the kind of insight we’ll send once email is wired up.</div>
+              <div class="modalTitle">Weekly Market Insight</div>
+              <div class="muted">Join our weekly drop of high-signal crypto intel, no fluff.</div>
             </div>
             <button class="x" id="closeEmailInsight">✕</button>
           </div>
 
-          <div class="insList">
-            <div class="bullet">
-              <div class="muted small">Subject</div>
-              <div><b>[CompareCrypto.ai]</b> Today’s most mispriced setup</div>
+          <div class="insList" style="padding-top:8px;">
+            <div class="weeklyHeroImage" aria-hidden="true">
+              <div class="weeklyOverlayText">Want more edge?</div>
+            </div>
+
+            <div class="bullet" style="margin-top:10px;">
+              <div class="muted small">Email</div>
+              <input class="input" id="weeklyEmailInput" placeholder="you@domain.com" />
+              <div class="muted small" id="weeklyEmailStatus" style="margin-top:8px;"></div>
             </div>
 
             <div class="bullet" style="margin-top:8px;">
-              <div class="muted small">Preview</div>
-              <div class="muted small" style="margin-top:4px;">
-                • Top spread opportunity across your tracked exchanges (with size + direction).<br/>
-                • One sentiment-driven coin setup you should take a second look at.<br/>
-                • Quick CTA to reopen this dashboard so you can act in under 30 seconds.
-              </div>
-            </div>
-
-            <div class="bullet" style="margin-top:8px;">
-              <div class="muted small">What happens next?</div>
-              <div class="muted small" style="margin-top:4px;">
-                Connect an email, and we’ll route this style of insight once per day you’re active — no spam, just high-signal recaps.
+              <div class="muted small">
+                We send one high-signal crypto brief weekly: top opportunities, execution notes, and conviction shifts. No spam.
               </div>
             </div>
           </div>
 
           <div class="modalCtas">
-            <button class="ctaWide" id="sendInsightEmail">Send this to my email</button>
+            <button class="ctaWide" id="sendInsightEmail">Join weekly intel</button>
           </div>
 
-          <div class="finePrint">Preview only for now — we’ll plug in real signals + sending once the email pipeline is live.</div>
+          <div class="finePrint">By joining, you agree to receive weekly product + market updates. Unsubscribe anytime.</div>
         </div>
       </div>
     `;
 }
 
-/* ---------- Auth modal (REVISED to be more visual, less text-heavy) ---------- */
+function IntelUpsellModal(state) {
+  const authed = !!state?.user;
+  return `
+      <div class="modalBackdrop" id="intelModal">
+        <div class="modal">
+          <div class="modalTop">
+            <div>
+              <div class="modalTitle">Unlock Premium Intel</div>
+              <div class="muted">${
+                authed
+                  ? "You’re signed in. Upgrade to unlock deeper sponsored research and premium intel briefs."
+                  : "Get deeper sponsored research, private briefings, and community alpha threads."
+              }</div>
+            </div>
+            <button class="x" id="closeIntelModal">✕</button>
+          </div>
+
+          <div class="insList" style="padding:8px 0;">
+            <div class="bullet" style="margin-top:0;">
+              <b>Sponsored by Binance</b>
+              <div class="muted small" style="margin-top:6px;">Premium members get deeper exchange intel and monthly featured deep-dives.</div>
+            </div>
+          </div>
+
+          <div class="modalCtas">
+            ${
+              authed
+                ? `<button class="ghostWide" id="openAuthFromIntel">Manage account</button>
+                   <button class="ctaWide" id="goPricingFromIntel">Upgrade to Premium</button>`
+                : `<button class="ghostWide" id="openAuthFromIntel">Create free account</button>
+                   <button class="ctaWide" id="goPricingFromIntel">View Premium</button>`
+            }
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+function IntelArticlePage(state) {
+  const slug = (state.route || "").replace("intel/", "");
+  const articles = {
+    "how-to-research-altcoins": {
+      title: "How To Research Altcoins Before You Buy",
+      deck: "A practical survival framework for filtering noise, avoiding weak launches, and focusing on projects that can actually last.",
+      sponsor: "Sponsored Research by Binance",
+      heroImage: "/intel/cards/how-to-research-altcoins.png",
+      stats: [
+        { k: "Failure reality", v: "Most new tokens fail" },
+        { k: "Default stance", v: "Assume zero until proven otherwise" },
+        { k: "Primary edge", v: "Discipline beats hype" },
+      ],
+      sections: [
+        {
+          h: "1) Start With Survival, Not Hype",
+          p: "Treat every new altcoin as guilty until proven innocent. Most launches are short-lived, so your first job is filtering for durability.",
+          bullets: [
+            "Prefer assets that have traded through at least 12–18 months of real market conditions.",
+            "Prioritize listings on liquid, reputable venues over micro-only listings.",
+            "Use position sizing that is tiny relative to daily volume and depth.",
+          ],
+          takeaway: "If liquidity is thin and age is short, move on.",
+          img: "/intel/sections/step1.png",
+        },
+        {
+          h: "2) Validate Real Use Case + Token Design",
+          p: "Good projects can explain their value in plain English. If the token is not necessary to the product, long-term demand is fragile.",
+          bullets: [
+            "Define the exact user problem solved better than incumbents.",
+            "Check if users exist now, not just in roadmap narratives.",
+            "Inspect supply schedule, unlock cliffs, and inflation pressure.",
+          ],
+          takeaway: "Complicated tokenomics usually benefit insiders first.",
+          img: "/intel/sections/step2.png",
+        },
+        {
+          h: "3) Confirm With On-Chain and Team Execution",
+          p: "On-chain activity is one of the few signals you can verify. Pair that with team quality and governance reality.",
+          bullets: [
+            "Track active addresses, transaction value, and fee dynamics over time.",
+            "Review wallet concentration and whale dominance risk.",
+            "Favor transparent teams, active repos, and clear audit history.",
+          ],
+          takeaway: "If usage is falling while price pumps, conviction is weak.",
+          img: "/intel/sections/step3.png",
+        },
+      ],
+    },
+    "exchange-execution-playbook": {
+      title: "Exchange Execution Playbook: Get Better Fills",
+      deck: "Execution is edge. Venue selection, order type, and sizing discipline can save more than fees ever will.",
+      sponsor: "Sponsored Research by Binance",
+      heroImage: "/intel/cards/exchange-execution-playbook.png",
+      stats: [
+        { k: "Core risk", v: "Slippage and liquidity fragmentation" },
+        { k: "Hidden cost", v: "Spread + fees + execution quality" },
+        { k: "Execution rule", v: "Slow is smooth, smooth is fast" },
+      ],
+      sections: [
+        {
+          h: "1) Choose Venue and Pair Intentionally",
+          p: "The same token can have very different liquidity depending on venue and quote pair. That difference directly impacts fill quality.",
+          bullets: [
+            "Compare quotes across top venues before each meaningful order.",
+            "Use deepest USD/USDT pairs when possible; convert separately if needed.",
+            "Avoid structurally thin pairs during high-volatility windows.",
+          ],
+          takeaway: "Best visible price is useless if the book cannot absorb your size.",
+          img: "/intel/sections/exchange1.png",
+        },
+        {
+          h: "2) Match Order Type to Market Conditions",
+          p: "Market orders are speed tools, not default tools. In thin books they can turn manageable risk into immediate damage.",
+          bullets: [
+            "Use limit orders for altcoins and larger entries.",
+            "Use maker/post-only behavior when fee structure favors it.",
+            "Expect worse slippage during event risk or panic liquidity drops.",
+          ],
+          takeaway: "On illiquid books, aggressive market buys are donation mode.",
+          img: "/intel/sections/exchange2.png",
+        },
+        {
+          h: "3) Slice Size and Price In Total Cost",
+          p: "Execution quality should be measured as all-in cost, not just displayed fee rates.",
+          bullets: [
+            "Split larger orders into tranches (manual laddering or time slicing).",
+            "Track spread + slippage + trading fee + funding (for perps).",
+            "For DEX trades, include pool depth and gas as first-class costs.",
+          ],
+          takeaway: "Good execution won’t make every trade win, but bad execution can make every trade worse.",
+          img: "/intel/sections/exchange3.png",
+        },
+      ],
+    },
+    "community-conviction-framework": {
+      title: "Community Conviction Framework",
+      deck: "Separate real believers from short-term tourists by combining on-chain engagement with community quality.",
+      sponsor: "Sponsored Research by Binance",
+      heroImage: "/intel/cards/community-conviction-framework.png",
+      stats: [
+        { k: "Signal type", v: "Usage + behavior through drawdowns" },
+        { k: "False signal", v: "Social hype without on-chain follow-through" },
+        { k: "Best setup", v: "Momentum aligned with rising participation" },
+      ],
+      sections: [
+        {
+          h: "1) Track On-Chain Engagement First",
+          p: "Conviction should show up in measurable usage, not just posts. Rising participation often leads durable trend phases.",
+          bullets: [
+            "Follow active addresses, transaction value, and fee participation.",
+            "Watch for sustained improvement, not one-off campaign spikes.",
+            "Treat price rallies without usage growth as fragile.",
+          ],
+          takeaway: "If users vanish, conviction is narrative-only.",
+          img: "/intel/sections/community1.png",
+        },
+        {
+          h: "2) Inspect Holder Base Quality",
+          p: "Who holds the supply matters as much as how many people mention the token online.",
+          bullets: [
+            "Measure concentration risk across top wallets.",
+            "Look for long-horizon holders, not only recent speculators.",
+            "Monitor exchange balances vs self-custody behavior.",
+          ],
+          takeaway: "Distributed ownership is more resilient than whale-dominated supply.",
+          img: "/intel/sections/community2.png",
+        },
+        {
+          h: "3) Stress-Test During Bear Conditions",
+          p: "The strongest conviction signal appears when price is weak but builders and users remain active.",
+          bullets: [
+            "Check whether development cadence survives drawdowns.",
+            "Look for a usage floor rather than total collapse.",
+            "Prefer communities producing tools and documentation over pure hype loops.",
+          ],
+          takeaway: "Real conviction compounds quietly before the next expansion phase.",
+          img: "/intel/sections/community3.png",
+        },
+      ],
+    },
+  };
+
+  const a = articles[slug] || articles["how-to-research-altcoins"];
+
+  return `
+      <div class="bg">
+        ${TopNav(state)}
+        <div class="wrap">
+          <div class="intelHero">
+            <div class="intelSponsor">${a.sponsor}</div>
+            <h1 class="intelTitle">${escapeHtml(a.title)}</h1>
+            <p class="intelDeck">${escapeHtml(a.deck)}</p>
+            <img class="intelHeroImage" src="${escapeHtml(a.heroImage)}" alt="${escapeHtml(a.title)} hero image" />
+            <div class="intelStatGrid">
+              ${a.stats
+                .map(
+                  (s) => `
+                <div class="intelStatCard">
+                  <div class="intelStatK">${escapeHtml(s.k)}</div>
+                  <div class="intelStatV">${escapeHtml(s.v)}</div>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          </div>
+
+          <div class="intelBody">
+            ${a.sections
+              .map(
+                (s, i) => `
+              <section class="intelSection parallaxStep ${i % 2 ? "rev" : ""}" style="animation-delay:${i * 140}ms;">
+                <div class="intelSectionCopy">
+                  <h2>${escapeHtml(s.h)}</h2>
+                  <p class="intelSectionLead">${escapeHtml(s.p)}</p>
+                  <ul class="intelChecklist">
+                    ${(s.bullets || []).map((b) => `<li>${escapeHtml(b)}</li>`).join("")}
+                  </ul>
+                  <div class="intelTakeaway">${escapeHtml(s.takeaway || "")}</div>
+                </div>
+                <div class="intelMediaWrap">
+                  <img class="intelSectionImage" src="${escapeHtml(s.img)}" alt="${escapeHtml(s.h)} visual" />
+                </div>
+              </section>
+            `
+              )
+              .join("")}
+          </div>
+
+          <div class="intelCtaRow">
+            <a class="btnAlt" href="#compare">Back to compare</a>
+            <button class="cta" id="intelMoreBtn">More intel</button>
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+function MarketsArticlePage(state) {
+  const slug = (state.route || "").replace("markets/", "");
+  const pages = {
+    "btc-outlook-2027": {
+      title: "BTC Outlook for 2027",
+      deck: "A strategic look at possible Bitcoin paths into 2027, from adoption curves to macro liquidity cycles.",
+      sponsor: "Market Research by CompareCrypto.ai",
+      heroImage: "/intel/cards/how-to-research-altcoins.png",
+      stats: [
+        { k: "Lens", v: "Long-cycle trend + adoption" },
+        { k: "Risk", v: "Macro liquidity and policy shifts" },
+        { k: "Setup", v: "Positioning over prediction" },
+      ],
+      sections: [
+        { h: "Adoption trajectory", p: "Placeholder content for BTC 2027 thesis.", bullets: ["Institutional demand cycles", "ETF flow behavior", "Supply dynamics post-halving"], takeaway: "BTC remains the benchmark risk barometer for crypto.", img: "/intel/sections/step1.png" },
+        { h: "Macro regime shifts", p: "Placeholder content for interest rates and liquidity impacts.", bullets: ["Dollar strength", "Real yields", "Global risk appetite"], takeaway: "Macro context often dominates short-term BTC direction.", img: "/intel/sections/step2.png" },
+        { h: "Execution framework", p: "Placeholder content for long-horizon accumulation strategy.", bullets: ["Risk budgeting", "Drawdown planning", "Scenario-based sizing"], takeaway: "Discipline outperforms narrative chasing.", img: "/intel/sections/step3.png" },
+      ],
+    },
+    "crypto-vs-nasdaq": {
+      title: "Crypto vs NASDAQ",
+      deck: "How crypto risk behaves relative to tech-heavy equities, and when correlation can break.",
+      sponsor: "Market Research by CompareCrypto.ai",
+      heroImage: "/intel/cards/exchange-execution-playbook.png",
+      stats: [
+        { k: "Comparison", v: "High-beta tech vs crypto beta" },
+        { k: "Focus", v: "Correlation and divergence" },
+        { k: "Use case", v: "Portfolio risk context" },
+      ],
+      sections: [
+        { h: "Correlation windows", p: "Placeholder content comparing regimes where crypto tracks NASDAQ.", bullets: ["Liquidity expansion phases", "Risk-on behavior", "Volatility clustering"], takeaway: "Correlation is dynamic, not static.", img: "/intel/sections/exchange1.png" },
+        { h: "Divergence events", p: "Placeholder content for idiosyncratic crypto catalysts.", bullets: ["Regulatory catalysts", "ETF/flow shifts", "Protocol-specific shocks"], takeaway: "Divergences often create alpha opportunities.", img: "/intel/sections/exchange2.png" },
+        { h: "Positioning playbook", p: "Placeholder content for balancing equity and crypto exposure.", bullets: ["Beta-adjusted sizing", "Hedge timing", "Conviction weighting"], takeaway: "Cross-asset framing improves risk decisions.", img: "/intel/sections/exchange3.png" },
+      ],
+    },
+    "crypto-vs-sp500": {
+      title: "Crypto vs S&P 500",
+      deck: "A practical framework for comparing crypto momentum against broad-market risk appetite.",
+      sponsor: "Market Research by CompareCrypto.ai",
+      heroImage: "/intel/cards/community-conviction-framework.png",
+      stats: [
+        { k: "Comparison", v: "Digital risk vs broad equity market" },
+        { k: "Signal", v: "Relative momentum context" },
+        { k: "Use case", v: "Macro-aware decision support" },
+      ],
+      sections: [
+        { h: "Risk appetite context", p: "Placeholder content on SPX trend phases and crypto spillover.", bullets: ["Earnings regime", "Policy backdrop", "Sentiment rotation"], takeaway: "SPX can frame broad risk tolerance.", img: "/intel/sections/community1.png" },
+        { h: "Relative strength", p: "Placeholder content on when crypto outperforms traditional beta.", bullets: ["Leadership shifts", "Flow concentration", "Volatility asymmetry"], takeaway: "Relative strength beats absolute narratives.", img: "/intel/sections/community2.png" },
+        { h: "Execution implications", p: "Placeholder content for integrating cross-market signals.", bullets: ["Entry timing", "Risk overlays", "Exit discipline"], takeaway: "Cross-market context reduces blind spots.", img: "/intel/sections/community3.png" },
+      ],
+    },
+  };
+
+  const a = pages[slug] || pages["btc-outlook-2027"];
+  return `
+      <div class="bg">
+        ${TopNav(state)}
+        <div class="wrap">
+          <div class="intelHero">
+            <div class="intelSponsor">${a.sponsor}</div>
+            <h1 class="intelTitle">${escapeHtml(a.title)}</h1>
+            <p class="intelDeck">${escapeHtml(a.deck)}</p>
+            <img class="intelHeroImage" src="${escapeHtml(a.heroImage)}" alt="${escapeHtml(a.title)} hero image" />
+            <div class="intelStatGrid">
+              ${a.stats.map((s) => `<div class="intelStatCard"><div class="intelStatK">${escapeHtml(s.k)}</div><div class="intelStatV">${escapeHtml(s.v)}</div></div>`).join("")}
+            </div>
+          </div>
+          <div class="intelBody">
+            ${a.sections
+              .map(
+                (s, i) => `
+              <section class="intelSection parallaxStep ${i % 2 ? "rev" : ""}" style="animation-delay:${i * 140}ms;">
+                <div class="intelSectionCopy">
+                  <h2>${escapeHtml(s.h)}</h2>
+                  <p class="intelSectionLead">${escapeHtml(s.p)}</p>
+                  <ul class="intelChecklist">${(s.bullets || []).map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
+                  <div class="intelTakeaway">${escapeHtml(s.takeaway || "")}</div>
+                </div>
+                <div class="intelMediaWrap">
+                  <img class="intelSectionImage" src="${escapeHtml(s.img)}" alt="${escapeHtml(s.h)} visual" />
+                </div>
+              </section>
+            `
+              )
+              .join("")}
+          </div>
+          <div class="intelCtaRow">
+            <a class="btnAlt" href="#dashboard">Back to dashboard</a>
+            <button class="cta" id="intelMoreBtn">More intel</button>
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+function CommunityPeekModal() {
+  return `
+      <div class="modalBackdrop" id="communityPeekModal">
+        <div class="modal big">
+          <div class="modalTop">
+            <div>
+              <div class="modalTitle" id="communityPeekTitle">Premium AI Insights</div>
+              <div class="muted" id="communityPeekSubtitle">Chat with our AI trading copilot using community signal context.</div>
+            </div>
+            <button class="x" id="closeCommunityPeek">✕</button>
+          </div>
+
+          <div class="insList" style="padding:8px 0;">
+            <div class="aiThread" id="communityPeekThread"></div>
+
+            <div class="aiLockCard" id="communityPeekLock" hidden>
+              <div class="aiLockTitle">Want more?</div>
+              <div class="muted small">Unlock Premium AI to continue this conversation with deeper conviction, risk, and execution detail.</div>
+              <button class="ctaWide" id="communityPeekInlineUpgrade" style="margin-top:10px;">Unlock Premium AI</button>
+            </div>
+
+            <div class="aiSuggestions">
+              <button class="chip aiPrompt" data-aiq="Where could this crypto be in 2 weeks?">Where could this be in 2 weeks?</button>
+              <button class="chip aiPrompt" data-aiq="What invalidates this setup?">What invalidates this setup?</button>
+              <button class="chip aiPrompt" data-aiq="What is the best risk-managed entry plan?">Best risk-managed entry plan?</button>
+            </div>
+
+            <div class="bullet" style="margin-top:10px;">
+              <div class="muted small">Reply</div>
+              <input class="input" id="communityPeekInput" placeholder="Ask the AI trading bot…" />
+              <button class="btnMini" id="communityPeekSend" style="margin-top:8px;">Send reply</button>
+            </div>
+          </div>
+
+          <div class="modalCtas">
+            <button class="ghostWide" id="communityPeekAccount">Create free account</button>
+            <button class="ctaWide" id="communityPeekUpgrade">Unlock Premium AI</button>
+          </div>
+
+          <div class="modalCtas" style="padding-top:10px;">
+            <button class="btnAlt" id="continueChatGPT">Continue in ChatGPT</button>
+            <button class="btnAlt" id="continueClaude">Continue in Claude</button>
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+function ReopenWorkspacePanel(state) {
+  const ctx = state.reopenContext || {};
+  const when = ctx.ts ? new Date(ctx.ts).toLocaleString() : "recently";
+  const setupLabel = ctx.mode === "exchanges" ? "Exchange execution" : "Asset conviction";
+  const items = (ctx.items || []).filter(Boolean);
+  const insights = buildSavedSetupInsights(state.lastCompareResult, ctx);
+
+  return `
+      <div class="reopenWorkspace">
+        <div class="reopenTop">
+          <div class="reopenTitle">Pro Insight: Saved Setup Brief</div>
+          <div class="muted small">Opened from Dashboard • ${escapeHtml(when)}</div>
+        </div>
+
+        <div class="reopenLead">
+          ${escapeHtml(insights.lead)}
+        </div>
+
+        <div class="reopenInsightGrid">
+          ${insights.cards
+            .map(
+              (c) => `
+            <div class="reopenInsightCard">
+              <div class="reopenInsightK">${escapeHtml(c.k)}</div>
+              <div class="reopenInsightV">${escapeHtml(c.v)}</div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+
+        <div class="reopenChips">
+          <span class="heroPill">Focus set: ${items.length} selections</span>
+          <span class="heroPill">Mode: ${escapeHtml(setupLabel)}</span>
+          <span class="heroPill">Premium take: ${escapeHtml(insights.takeaway)}</span>
+        </div>
+      </div>
+    `;
+}
+
+function buildSavedSetupInsights(result, ctx) {
+  const mode = ctx?.mode || result?.kind || "assets";
+  const rows = Array.isArray(result?.rows) ? result.rows : [];
+
+  if (!rows.length) {
+    return {
+      lead: "Snapshot loaded. Run Compare now to refresh the latest prices and unlock deeper setup guidance.",
+      takeaway: "refresh this setup for actionable direction",
+      cards: [
+        { k: "Status", v: "Saved setup restored" },
+        { k: "Next move", v: "Run compare for live read" },
+        { k: "Premium edge", v: "AI execution plan + alerts" },
+      ],
+    };
+  }
+
+  if (mode === "exchanges" || result?.kind === "exchanges") {
+    const parsed = rows
+      .map((r) => ({ ...r, _price: parsePriceDisplay(r.price) }))
+      .filter((r) => Number.isFinite(r._price));
+
+    if (!parsed.length) {
+      return {
+        lead: "Exchange setup reopened. Run a fresh compare to restore quote-level guidance.",
+        takeaway: "check live books before placing size",
+        cards: [
+          { k: "Best venue", v: "Run compare" },
+          { k: "Fee/slippage edge", v: "Pending live quote" },
+          { k: "Community ease", v: "Pending venue score" },
+        ],
+      };
+    }
+
+    const byPrice = [...parsed].sort((a, b) => a._price - b._price);
+    const best = byPrice[0];
+    const worst = byPrice[byPrice.length - 1];
+    const spreadPct = best?._price ? ((worst._price - best._price) / best._price) * 100 : 0;
+    const pair = parsed.find((r) => r.pair)?.pair || `${(result?.items || [])[0] || "BTC"}/USD`;
+    const easiest = [...parsed].sort((a, b) => exchangeEaseScore(b.exchange) - exchangeEaseScore(a.exchange))[0];
+
+    return {
+      lead: `${best.exchange} currently leads ${pair} execution. Versus ${worst.exchange}, this setup shows a ${spreadPct.toFixed(
+        2
+      )}% price gap you can avoid with venue selection.`,
+      takeaway: `${best.exchange} is strongest for price; ${easiest.exchange} leads onboarding ease`,
+      cards: [
+        { k: "Best quote", v: `${best.exchange} at $${best._price.toLocaleString(undefined, { maximumFractionDigits: 2 })}` },
+        { k: "Price delta", v: `${spreadPct.toFixed(2)}% vs ${worst.exchange}` },
+        { k: "Community ease", v: `${easiest.exchange} (${exchangeEaseScore(easiest.exchange)}/100)` },
+      ],
+    };
+  }
+
+  const parsed = rows.map((r) => ({
+    ...r,
+    _c24: Number(r.change24h || 0),
+    _c7: Number(r.change7d || 0),
+    _mcap: parseCompactMoneyValue(r.mcap),
+  }));
+  const momentum = [...parsed].sort((a, b) => b._c24 + b._c7 - (a._c24 + a._c7))[0];
+  const conviction = [...parsed].sort((a, b) => convictionScore(b) - convictionScore(a))[0];
+  const anchor = [...parsed].sort((a, b) => b._mcap - a._mcap)[0];
+
+  return {
+    lead: `${conviction.sym} shows the strongest conviction mix right now, with momentum and sentiment aligned. ${momentum.sym} is the speed leader, while ${anchor.sym} provides the size anchor.`,
+    takeaway: `prioritize ${conviction.sym} for conviction, monitor ${momentum.sym} for momentum breaks`,
+    cards: [
+      { k: "Conviction leader", v: `${conviction.sym} (${conviction.sentiment || "Neutral"}, ${signed(conviction._c24)} 24h)` },
+      { k: "Momentum leader", v: `${momentum.sym} (${signed(momentum._c24)} 24h / ${signed(momentum._c7)} 7d)` },
+      { k: "Stability anchor", v: `${anchor.sym} (${anchor.mcap || "—"} market cap)` },
+    ],
+  };
+}
+
+function parsePriceDisplay(v) {
+  const n = Number(String(v ?? "").replace(/,/g, ""));
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function parseCompactMoneyValue(v) {
+  const raw = String(v || "").replace(/[$,\s]/g, "").toUpperCase();
+  const m = raw.match(/^(-?\d+(\.\d+)?)([KMBT])?$/);
+  if (!m) return 0;
+  const num = Number(m[1]);
+  const mult = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 };
+  return num * (mult[m[3]] || 1);
+}
+
+function convictionScore(row) {
+  const sent = String(row?.sentiment || "").toLowerCase();
+  const sentimentBoost = sent.includes("bull") ? 3 : sent.includes("bear") ? -3 : 0;
+  const risk = String(row?.risk || "").toLowerCase();
+  const riskPenalty = risk === "high" ? 2 : risk === "medium" ? 1 : 0;
+  return Number(row?._c24 || 0) + Number(row?._c7 || 0) + sentimentBoost - riskPenalty;
+}
+
+function exchangeEaseScore(name) {
+  const key = String(name || "").toLowerCase();
+  const scores = {
+    coinbase: 92,
+    binance: 90,
+    kraken: 88,
+    bybit: 85,
+    okx: 84,
+    gemini: 82,
+    bitstamp: 80,
+    kucoin: 78,
+    "gate.io": 76,
+    mexc: 74,
+  };
+  return scores[key] || 75;
+}
+
+function signed(v) {
+  const n = Number(v || 0);
+  return `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+}
+
+/* ---------- Auth modal ---------- */
 
 function AuthModal(state) {
-  const compares = state?.lifetimeCompares || 0;
-  const points = compares * 10;
-  const streakDays = state?.streak?.days || 0;
-
-  const nextRewardAt = 10;
-  const untilReward = Math.max(0, nextRewardAt - compares);
-  const pct = Math.max(0, Math.min(100, Math.round((compares / nextRewardAt) * 100)));
-
-  const progressCopy =
-    compares >= nextRewardAt
-      ? "Free insight unlocked — log in to claim it."
-      : `Get a free insight in ${untilReward} compare${untilReward === 1 ? "" : "s"}.`;
+  const mode = state?._authMode === "signup" ? "signup" : "login";
+  const authTitle = mode === "signup" ? "Create your free account" : "Welcome back";
+  const authSubtitle =
+    mode === "signup"
+      ? "Save setups, set alerts, and keep your best compares synced."
+      : "Sign in to manage your alerts, saved setups, and dashboard.";
+  const toggleLabel =
+    mode === "signup" ? "Already have an account? Sign in" : "New here? Create a free account";
+  const nextMode = mode === "signup" ? "signup" : "login";
 
   return `
       <div class="modalBackdrop" id="authModal">
@@ -709,62 +1344,20 @@ function AuthModal(state) {
 
           <div class="modalTop">
             <div>
-              <div class="modalTitle" id="authTitle">Unlock your edge</div>
-              <div class="muted" id="authSubtitle">${progressCopy}</div>
+              <div class="modalTitle" id="authTitle">${authTitle}</div>
+              <div class="muted" id="authSubtitle">${authSubtitle}</div>
             </div>
             <button class="x" id="closeAuth">✕</button>
           </div>
 
-          <!-- Two-column layout without new CSS classes -->
           <div style="
             display:grid;
             grid-template-columns: 1.1fr 0.9fr;
             gap: 12px;
             padding: 10px 4px 0;
           ">
-
-            <!-- LEFT: rewards/value (more visual) -->
             <div>
-
-              <!-- Progress bar card -->
-              <div class="bullet" style="margin-top:0;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                  <div>
-                    <div class="muted small">Reward progress</div>
-                    <div style="font-weight:900; margin-top:2px;">Free Insight Unlock</div>
-                  </div>
-                  <div style="font-weight:900;">${pct}%</div>
-                </div>
-
-                <div style="
-                  margin-top:10px;
-                  height:10px;
-                  border-radius:999px;
-                  border:1px solid rgba(148,163,184,.55);
-                  background: rgba(9,13,32,.96);
-                  overflow:hidden;
-                ">
-                  <div style="
-                    height:100%;
-                    width:${pct}%;
-                    background: linear-gradient(90deg, rgba(0,212,255,.85), rgba(168,85,255,.70));
-                  "></div>
-                </div>
-
-                <div class="muted small" style="margin-top:8px;">
-                  ${compares >= nextRewardAt ? "Unlocked — log in and we’ll show your preview." : `Run ${untilReward} more compare${untilReward === 1 ? "" : "s"} to unlock.`}
-                </div>
-              </div>
-
-              <!-- Stats pills -->
-              <div class="perkRow" style="padding:10px 0 0;">
-                <div class="perk">Points: <b style="margin-left:6px;">${points}</b></div>
-                <div class="perk">Streak: <b style="margin-left:6px;">${streakDays}d</b></div>
-                <div class="perk">Total compares: <b style="margin-left:6px;">${compares}</b></div>
-              </div>
-
-              <!-- Value tiles -->
-              <div style="margin-top:8px;">
+              <div>
                 <div class="bullet" style="margin-top:8px;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div style="font-size:18px;">💾</div>
@@ -779,8 +1372,8 @@ function AuthModal(state) {
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div style="font-size:18px;">⚡</div>
                     <div>
-                      <div style="font-weight:900;">Earn rewards</div>
-                      <div class="muted small" style="margin-top:2px;">Streaks unlock trials + insight previews.</div>
+                      <div style="font-weight:900;">Set email alerts</div>
+                      <div class="muted small" style="margin-top:2px;">Free accounts include 2 alert credits to start.</div>
                     </div>
                   </div>
                 </div>
@@ -789,8 +1382,8 @@ function AuthModal(state) {
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div style="font-size:18px;">🧠</div>
                     <div>
-                      <div style="font-weight:900;">Premium signals later</div>
-                      <div class="muted small" style="margin-top:2px;">Alerts, prediction overlays, exchange intel.</div>
+                      <div style="font-weight:900;">Premium signals</div>
+                      <div class="muted small" style="margin-top:2px;">Unlimited alerts, deeper exchange intel, AI bot access.</div>
                     </div>
                   </div>
                 </div>
@@ -801,7 +1394,6 @@ function AuthModal(state) {
               </div>
             </div>
 
-            <!-- RIGHT: form -->
             <div>
               <div class="insList" style="padding:0;">
                 <div class="bullet" style="margin-top:0;">
@@ -818,7 +1410,7 @@ function AuthModal(state) {
 
                 <div class="modalCtas" style="margin-top:14px;">
                   <button class="ctaWide" id="authSubmitBtn">Continue</button>
-                  <button class="ghostWide" id="toggleAuthModeBtn" data-mode="login">New here? Create a free account</button>
+                  <button class="ghostWide" id="toggleAuthModeBtn" data-mode="${nextMode}">${toggleLabel}</button>
                 </div>
 
                 <div class="finePrint">
@@ -826,11 +1418,7 @@ function AuthModal(state) {
                 </div>
               </div>
             </div>
-
           </div>
-
-          <!-- Simple mobile stacking -->
-          <div style="display:none;" aria-hidden="true"></div>
         </div>
       </div>
     `;
@@ -881,12 +1469,12 @@ function ViewCard(v) {
 function EmptyDash() {
   return `
       <div class="emptyDash">
-        <div class="emptyTitle">No saved views yet</div>
+        <div class="emptyTitle">No saved compares yet</div>
         <div class="muted small">
-          <div>Saved views let you reopen your favourite compares in one click instead of rebuilding them every time.</div>
-          <div style="margin-top:4px;">Run a compare, hit <b>Save View</b>, and we’ll keep your latest 12 setups here.</div>
+          <div>This is where your best market setups live.</div>
+          <div style="margin-top:4px;">Run a compare, click <b>Save view</b>, and you'll be able to reopen it instantly when conditions change.</div>
         </div>
-        <a class="btnInline" href="#compare" style="margin-top:10px;">Go to Compare</a>
+        <a class="btnInline" href="#compare" style="margin-top:10px;">Go to compare</a>
       </div>
     `;
 }

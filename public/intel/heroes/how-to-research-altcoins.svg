@@ -1,0 +1,12 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='630' viewBox='0 0 1200 630'>
+  <defs>
+    <linearGradient id='g1' x1='0' x2='1' y1='0' y2='1'>
+      <stop offset='0%' stop-color='#1d4ed8'/>
+      <stop offset='100%' stop-color='#0f172a'/>
+    </linearGradient>
+  </defs>
+  <rect width='1200' height='630' fill='url(#g1)'/>
+  <circle cx='1020' cy='120' r='160' fill='rgba(56,189,248,.25)'/>
+  <text x='70' y='290' fill='#e2e8f0' font-size='68' font-family='Arial, Helvetica, sans-serif' font-weight='700'>ALTCOIN RESEARCH</text>
+  <text x='70' y='350' fill='#93c5fd' font-size='30' font-family='Arial, Helvetica, sans-serif'>Replace with your cover image</text>
+</svg>

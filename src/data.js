@@ -120,7 +120,7 @@ export async function getMarketsByIds(ids, vs = "usd") {
   const url =
     `${CG}/coins/markets?vs_currency=${encodeURIComponent(vs)}` +
     `&ids=${encodeURIComponent(ids.join(","))}` +
-    `&price_change_percentage=24h` +
+    `&price_change_percentage=24h,7d` +
     `&sparkline=false`;
 
   const data = await fetchJson(url);
@@ -140,6 +140,82 @@ export async function getCoinTickers(coinId) {
   const data = await fetchJson(url);
   cacheSet(key, data, 30_000);
   return data;
+}
+
+// Compare multiple assets — real prices from CoinGecko
+export async function compareAssets(symbols) {
+  if (!symbols?.length) return [];
+  const ids = [];
+  const resolved = [];
+  for (const sym of symbols) {
+    try {
+      const r = await resolveCoin(sym);
+      ids.push(r.id);
+      resolved.push({ id: r.id, symbol: r.symbol.toUpperCase(), name: r.name });
+    } catch {
+      // skip unknown
+    }
+  }
+  if (!ids.length) return [];
+
+  const markets = await getMarketsByIds(ids);
+  const byId = new Map(markets.map((m) => [m.id, m]));
+
+  return resolved
+    .filter((r) => byId.has(r.id))
+    .map((r) => {
+      const m = byId.get(r.id);
+      const ch = Number(m?.price_change_percentage_24h) ?? 0;
+      const sent = sentimentFromPct(ch);
+      const ch7 = Number(m?.price_change_percentage_7d_in_currency) ?? 0;
+      const risk = Math.abs(ch) > 6 ? "High" : Math.abs(ch) > 3 ? "Medium" : "Low";
+      const signal =
+        ch > 1.5 && ch7 > 0
+          ? "Bull trend"
+          : ch < -1.5 && ch7 < 0
+            ? "Bear pressure"
+            : ch < 0 && ch7 > 0
+              ? "Pullback"
+              : "Range-bound";
+      return {
+        sym: r.symbol,
+        tag: r.name,
+        price: formatMoney(m?.current_price ?? 0, { compact: false, maxFrac: 4 }).replace("$", ""),
+        change24h: ch.toFixed(2),
+        change7d: ch7.toFixed(2),
+        sentiment: sent.label,
+        risk,
+        prediction24h: signal,
+        mcap: formatMoney(m?.market_cap ?? 0, { compact: true }),
+      };
+    });
+}
+
+// Scan exchanges for an asset — real prices from CoinGecko tickers
+export async function scanExchanges(assetSymbol, selectedExchanges = []) {
+  const coin = await resolveCoin(assetSymbol);
+  const tickersData = await getCoinTickers(coin.id);
+  const rows = extractExchangeQuotes(tickersData, selectedExchanges);
+
+  // If no selection, show top 6 by volume
+  const display = rows.length > 0 ? rows : extractExchangeQuotes(tickersData, []);
+
+  const sliced = display.slice(0, 8);
+  const best = Math.min(...sliced.map((r) => r.usd));
+
+  return sliced.map((r) => {
+    const vsBestPct = best > 0 ? ((r.usd - best) / best) * 100 : 0;
+    return {
+      exchange: r.exchange,
+      pair: r.pair || `${coin.symbol.toUpperCase()}/USDT`,
+      price: formatMoney(r.usd, { compact: false, maxFrac: 2 }).replace("$", ""),
+      spread: `${vsBestPct.toFixed(2)}%`,
+      liquidity: r.volumeUsd > 1e9 ? "High" : r.volumeUsd > 1e8 ? "Medium" : "Low",
+      volumeUsd: r.volumeUsd,
+      trust: r.trust,
+      signal: vsBestPct <= 0.05 ? "Best buy" : "Monitor",
+    };
+  });
 }
 
 // Build an exchange view for selected exchanges
