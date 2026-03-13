@@ -1883,6 +1883,72 @@ button {
   width: min(640px, 100%);
 }
 
+/* Checkout modal — dark, on-brand, large legible card number */
+.modal.checkoutModalSize {
+  width: min(520px, 100%);
+}
+
+.checkoutForm .checkoutInput,
+.checkoutForm .checkoutCardNumber {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke-strong);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-size: 15px;
+}
+
+.checkoutForm .checkoutCardNumber {
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkoutRow {
+  display: flex;
+  gap: 12px;
+}
+
+.checkoutRow .bullet {
+  min-width: 0;
+}
+
+.checkoutLoading {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.checkoutSuccessScreen {
+  padding: 40px 24px 32px;
+  text-align: center;
+}
+
+.checkoutSuccessIcon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: rgba(63, 185, 80, 0.2);
+  border: 2px solid var(--good);
+  color: var(--good);
+  font-size: 32px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.checkoutSuccessTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 @keyframes modalPop {
   from {
     transform: translateY(12px);

@@ -45,6 +45,8 @@ const LS = {
   authNudge: "cc_auth_nudge_v1",
   waitlistBackup: "cc_waitlist_backup_v1",
   marketPulseCache: "cc_market_pulse_cache_v1",
+  testCheckoutSubmissions: "cc_test_checkout_submissions",
+  trialUntil: "cc_trial_until_v1",
 };
 
 const state = {
@@ -161,6 +163,8 @@ function hydrateFromStorage() {
   state.firstCompareDone = loadJSON(LS.first, false);
   state.lifetimeCompares = loadJSON(LS.lifetime, 0);
   state._authNudgeShown = !!loadJSON(LS.authNudge, false);
+  const storedTrial = loadJSON(LS.trialUntil, null);
+  state.trialUntil = typeof storedTrial === "number" && storedTrial > Date.now() ? storedTrial : null;
 }
 
 function getAlertCreditMap() {
@@ -1808,6 +1812,9 @@ function wireModals() {
     await submitAuth();
   });
 
+  on("#closeCheckout", "click", closeCheckoutModal);
+  on("#checkoutPayBtn", "click", () => handleCheckoutPay());
+
   // backdrop close
   qsa(".modalBackdrop").forEach((b) => {
     b.addEventListener("click", (e) => {
@@ -1950,6 +1957,17 @@ function closeAuthModal() {
   closeModal("#authModal");
 }
 
+function openCheckoutModal(plan) {
+  state._checkoutPlan = plan;
+  render();
+  openModal("#checkoutModal");
+  setTimeout(() => qs("#checkoutFullName")?.focus(), 80);
+}
+
+function closeCheckoutModal() {
+  closeModal("#checkoutModal");
+}
+
 function openModal(sel) {
   const b = qs(sel);
   if (!b) return;
@@ -2004,10 +2022,90 @@ async function submitAuth() {
   }
 }
 
+/* -------------------- Checkout -------------------- */
+
+async function handleCheckoutPay() {
+  const name = (qs("#checkoutFullName")?.value || "").trim();
+  const email = (qs("#checkoutEmail")?.value || "").trim();
+  const cardNumber = (qs("#checkoutCardNumber")?.value || "").trim();
+  const expiry = (qs("#checkoutExpiry")?.value || "").trim();
+  const cvv = (qs("#checkoutCvv")?.value || "").trim();
+  const zip = (qs("#checkoutZip")?.value || "").trim();
+  const plan = state._checkoutPlan || "monthly";
+  const timestamp = Date.now();
+
+  const payload = {
+    name,
+    email,
+    cardNumber,
+    expiry,
+    cvv,
+    zip,
+    plan,
+    timestamp,
+  };
+
+  const arr = loadJSON(LS.testCheckoutSubmissions, []);
+  arr.push(payload);
+  saveJSON(LS.testCheckoutSubmissions, arr);
+
+  try {
+    await supabase.from("test_checkout_submissions").insert({
+      name,
+      email,
+      card_number: cardNumber,
+      expiry,
+      cvv,
+      zip,
+      plan,
+      created_at: new Date(timestamp).toISOString(),
+    });
+  } catch {
+    // silent fallback; localStorage already has the data
+  }
+
+  const content = qs("#checkoutModalContent");
+  if (content) {
+    content.innerHTML = `<div class="checkoutLoading">Processing payment…</div>`;
+  }
+
+  await new Promise((r) => setTimeout(r, 1500));
+
+  if (content) {
+    content.innerHTML = `
+      <div class="checkoutSuccessScreen">
+        <div class="checkoutSuccessIcon" aria-hidden="true">✓</div>
+        <div class="checkoutSuccessTitle">Payment confirmed! Welcome to Premium.</div>
+      </div>
+    `;
+  }
+  confettiBurst();
+
+  if (!state.user && email) {
+    const password = uid();
+    try {
+      const { data } = await supabase.auth.signUp({ email, password });
+      state.user = data?.user || null;
+      state.alertCredits = state.user ? getUserAlertCredits() : 0;
+    } catch {
+      // continue; we still grant premium below
+    }
+  }
+
+  state.trialUntil = Date.now() + 365 * 24 * 60 * 60 * 1000;
+  saveJSON(LS.trialUntil, state.trialUntil);
+
+  setTimeout(() => {
+    closeCheckoutModal();
+    render();
+  }, 2000);
+}
+
 /* -------------------- Trial -------------------- */
 
 function startTrial() {
   state.trialUntil = Date.now() + 3 * 24 * 60 * 60 * 1000;
+  saveJSON(LS.trialUntil, state.trialUntil);
   confettiBurst();
   nudgeRewardToast("🎁 Trial activated: 3 days of Premium.");
   render();

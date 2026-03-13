@@ -13,7 +13,7 @@ export function App(state) {
   else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
 
-  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}`;
+  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}${CheckoutModal(state)}`;
 }
 
 /* ---------- Top Nav ---------- */
@@ -742,6 +742,66 @@ function ExchangeInsightModal() {
           </div>
 
           <div class="finePrint">Use exchange insights to compare execution quality, fees, and regional availability before funding.</div>
+        </div>
+      </div>
+    `;
+}
+
+function CheckoutModal(state) {
+  const plan = state._checkoutPlan || "monthly";
+  const planLabel = plan === "yearly" ? "Yearly" : "Monthly";
+  const planPrice = plan === "yearly" ? "$200/year" : "$20/month";
+  const prefillEmail = state.user?.email || "";
+
+  return `
+      <div class="modalBackdrop" id="checkoutModal">
+        <div class="modal checkoutModalSize">
+          <div class="modalTop">
+            <div>
+              <div class="modalTitle" id="checkoutPlanTitle">${planLabel} — ${planPrice}</div>
+              <div class="muted">Complete your purchase. All fields visible for testing.</div>
+            </div>
+            <button class="x" id="closeCheckout" aria-label="Close">✕</button>
+          </div>
+
+          <div id="checkoutModalContent">
+            <div class="checkoutForm">
+              <div class="bullet" style="margin-top:0;">
+                <div class="muted small">Full name</div>
+                <input class="input checkoutInput" id="checkoutFullName" type="text" placeholder="Jane Doe" />
+              </div>
+
+              <div class="bullet" style="margin-top:10px;">
+                <div class="muted small">Email</div>
+                <input class="input checkoutInput" id="checkoutEmail" type="text" placeholder="you@domain.com" value="${escapeHtml(prefillEmail)}" />
+              </div>
+
+              <div class="bullet" style="margin-top:10px;">
+                <div class="muted small">Card number (16 digits, visible)</div>
+                <input class="input checkoutCardNumber" id="checkoutCardNumber" type="text" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19" />
+              </div>
+
+              <div class="checkoutRow">
+                <div class="bullet" style="margin-top:10px; flex:1;">
+                  <div class="muted small">Expiry (MM/YY)</div>
+                  <input class="input checkoutInput" id="checkoutExpiry" type="text" placeholder="12/28" maxlength="5" />
+                </div>
+                <div class="bullet" style="margin-top:10px; flex:1;">
+                  <div class="muted small">CVV (visible)</div>
+                  <input class="input checkoutInput" id="checkoutCvv" type="text" inputmode="numeric" placeholder="123" maxlength="4" />
+                </div>
+              </div>
+
+              <div class="bullet" style="margin-top:10px;">
+                <div class="muted small">Billing ZIP</div>
+                <input class="input checkoutInput" id="checkoutZip" type="text" placeholder="10001" />
+              </div>
+
+              <div class="modalCtas" style="margin-top:16px;">
+                <button class="ctaWide" id="checkoutPayBtn">Pay Now</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
