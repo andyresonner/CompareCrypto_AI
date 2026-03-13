@@ -13,7 +13,7 @@ export function App(state) {
   else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
 
-  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}${CheckoutModal(state)}`;
+  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}${CheckoutModal(state)}${TrialModal(state)}`;
 }
 
 /* ---------- Top Nav ---------- */
@@ -805,6 +805,64 @@ function CheckoutModal(state) {
         </div>
       </div>
     `;
+}
+
+function TrialModal(state) {
+  const trialUntil = state.trialUntil || Date.now() + 3 * 24 * 60 * 60 * 1000;
+  const initialCountdown = formatTrialCountdown(trialUntil);
+
+  return `
+      <div class="modalBackdrop" id="trialModal">
+        <div class="modal trialModalSize">
+          <a href="#" class="trialModalSkip" id="trialModalSkip">skip for now</a>
+          <div class="modalTop trialModalTop">
+            <div>
+              <div class="trialModalHeadline">Your 3-day Premium trial is live 🎉</div>
+              <div class="trialCountdown" id="trialCountdown">${initialCountdown}</div>
+            </div>
+            <button class="x" id="closeTrialModal" aria-label="Close">✕</button>
+          </div>
+
+          <div class="trialUnlockedSection">
+            <div class="trialUnlockedTitle">What you just unlocked</div>
+            <div class="trialUnlockedGrid">
+              <div class="trialUnlockedItem">
+                <span class="trialUnlockedIcon">✦</span>
+                <span>Community Predictions (24H) — see where the crowd thinks prices are going</span>
+              </div>
+              <div class="trialUnlockedItem">
+                <span class="trialUnlockedIcon">✦</span>
+                <span>Exchange Signals — best execution routes across 6+ exchanges</span>
+              </div>
+              <div class="trialUnlockedItem">
+                <span class="trialUnlockedIcon">✦</span>
+                <span>Sentiment Shift Alerts — get notified when sentiment flips</span>
+              </div>
+              <div class="trialUnlockedItem">
+                <span class="trialUnlockedIcon">✦</span>
+                <span>Full Risk Intelligence — deep risk scoring per asset</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modalCtas trialModalCtas">
+            <button class="cta ctaTrialModal" id="trialModalCta">Run my first Premium compare →</button>
+          </div>
+        </div>
+      </div>
+    `;
+}
+
+function formatTrialCountdown(untilMs) {
+  const now = Date.now();
+  let rem = Math.max(0, Math.floor((untilMs - now) / 1000));
+  const d = Math.floor(rem / 86400);
+  rem %= 86400;
+  const h = Math.floor(rem / 3600);
+  rem %= 3600;
+  const m = Math.floor(rem / 60);
+  const s = rem % 60;
+  return `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s remaining`;
 }
 
 function EmailInsightModal() {

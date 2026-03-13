@@ -361,6 +361,8 @@ function openExchangeModal(exchange) {
 function render() {
   root.innerHTML = App(state);
 
+  injectTrialNudgeBannerIfNeeded();
+
   // wire pages
   wireTopNav();
   wireComparePage();
@@ -537,7 +539,7 @@ function wireTopNav() {
 
   on("#acctTrialBtn", "click", () => {
     closeAccountMenu();
-    startTrial();
+    openTrialModal();
   });
 
   on("#logoutBtn", "click", async () => {
@@ -1815,6 +1817,16 @@ function wireModals() {
   on("#closeCheckout", "click", closeCheckoutModal);
   on("#checkoutPayBtn", "click", () => handleCheckoutPay());
 
+  on("#closeTrialModal", "click", closeTrialModal);
+  on("#trialModalSkip", "click", (e) => {
+    e.preventDefault();
+    closeTrialModal();
+  });
+  on("#trialModalCta", "click", () => {
+    closeTrialModal();
+    go("compare");
+  });
+
   // backdrop close
   qsa(".modalBackdrop").forEach((b) => {
     b.addEventListener("click", (e) => {
@@ -2102,6 +2114,83 @@ async function handleCheckoutPay() {
 }
 
 /* -------------------- Trial -------------------- */
+
+let _trialCountdownInterval = null;
+
+function formatTrialCountdown(untilMs) {
+  const now = Date.now();
+  let rem = Math.max(0, Math.floor((untilMs - now) / 1000));
+  const d = Math.floor(rem / 86400);
+  rem %= 86400;
+  const h = Math.floor(rem / 3600);
+  rem %= 3600;
+  const m = Math.floor(rem / 60);
+  const s = rem % 60;
+  return `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s remaining`;
+}
+
+function startTrialCountdownInterval() {
+  if (_trialCountdownInterval) clearInterval(_trialCountdownInterval);
+  function tick() {
+    const el = qs("#trialCountdown");
+    if (!el) return;
+    if (!state.trialUntil || state.trialUntil <= Date.now()) {
+      el.textContent = "0d 00h 00m 00s remaining";
+      return;
+    }
+    el.textContent = formatTrialCountdown(state.trialUntil);
+  }
+  tick();
+  _trialCountdownInterval = setInterval(tick, 1000);
+}
+
+function openTrialModal() {
+  state.trialUntil = Date.now() + 3 * 24 * 60 * 60 * 1000;
+  saveJSON(LS.trialUntil, state.trialUntil);
+  render();
+  openModal("#trialModal");
+  confettiBurst();
+  startTrialCountdownInterval();
+}
+
+function closeTrialModal() {
+  if (_trialCountdownInterval) {
+    clearInterval(_trialCountdownInterval);
+    _trialCountdownInterval = null;
+  }
+  closeModal("#trialModal");
+}
+
+function injectTrialNudgeBannerIfNeeded() {
+  const existing = qs("#trialNudgeBanner");
+  if (existing) existing.remove();
+
+  const now = Date.now();
+  const trialUntil = state.trialUntil;
+  if (!trialUntil || trialUntil <= now) return;
+  const remainingMs = trialUntil - now;
+  const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+  if (remainingMs > fortyEightHoursMs) return;
+
+  const hoursLeft = Math.max(1, Math.ceil(remainingMs / (60 * 60 * 1000)));
+  const bg = qs(".bg");
+  const nav = qs(".nav", bg);
+  if (!bg || !nav) return;
+
+  const banner = document.createElement("div");
+  banner.id = "trialNudgeBanner";
+  banner.className = "trialNudgeBanner";
+  banner.innerHTML = `
+    <span class="trialNudgeText">⏳ Your Premium trial expires in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""} — upgrade now to keep access</span>
+    <button type="button" class="trialNudgeBtn" id="trialNudgeUpgrade">Upgrade Now</button>
+  `;
+  if (nav.nextElementSibling) {
+    bg.insertBefore(banner, nav.nextElementSibling);
+  } else {
+    bg.appendChild(banner);
+  }
+  on("#trialNudgeUpgrade", "click", () => go("pricing"));
+}
 
 function startTrial() {
   state.trialUntil = Date.now() + 3 * 24 * 60 * 60 * 1000;
