@@ -47,6 +47,7 @@ const LS = {
   marketPulseCache: "cc_market_pulse_cache_v1",
   testCheckoutSubmissions: "cc_test_checkout_submissions",
   trialUntil: "cc_trial_until_v1",
+  remindTomorrow: "cc_remind_tomorrow_v1",
 };
 
 const state = {
@@ -539,7 +540,11 @@ function wireTopNav() {
 
   on("#acctTrialBtn", "click", () => {
     closeAccountMenu();
-    openTrialModal();
+    if (state.trialUntil && state.trialUntil > Date.now()) {
+      openTrialSalesModal();
+    } else {
+      openTrialModal();
+    }
   });
 
   on("#logoutBtn", "click", async () => {
@@ -1563,8 +1568,8 @@ async function fetchCommunityPulseRows() {
 
 function wirePricingPage() {
   if (state.route !== "pricing") return;
-  on("#checkoutMonthly", "click", () => go("waitlist"));
-  on("#checkoutYearly", "click", () => go("waitlist"));
+  on("#checkoutMonthly", "click", () => openCheckoutModal("monthly"));
+  on("#checkoutYearly", "click", () => openCheckoutModal("yearly"));
 }
 
 function wireWaitlistPage() {
@@ -1818,13 +1823,27 @@ function wireModals() {
   on("#checkoutPayBtn", "click", () => handleCheckoutPay());
 
   on("#closeTrialModal", "click", closeTrialModal);
-  on("#trialModalSkip", "click", (e) => {
-    e.preventDefault();
-    closeTrialModal();
-  });
   on("#trialModalCta", "click", () => {
     closeTrialModal();
     go("compare");
+  });
+
+  on("#closeTrialSalesModal", "click", closeTrialSalesModal);
+  on("#trialSalesSkip", "click", (e) => {
+    e.preventDefault();
+    closeTrialSalesModal();
+  });
+  on("#trialSalesUpgradeBtn", "click", () => {
+    closeTrialSalesModal();
+    openCheckoutModal("monthly");
+  });
+  on("#trialSalesRemindBtn", "click", (e) => {
+    e.preventDefault();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    saveJSON(LS.remindTomorrow, tomorrow.getTime());
+    nudgeRewardToast("We'll remind you tomorrow");
+    closeTrialSalesModal();
   });
 
   // backdrop close
@@ -2159,6 +2178,37 @@ function closeTrialModal() {
     _trialCountdownInterval = null;
   }
   closeModal("#trialModal");
+}
+
+let _trialSalesCountdownInterval = null;
+
+function startTrialSalesCountdownInterval() {
+  if (_trialSalesCountdownInterval) clearInterval(_trialSalesCountdownInterval);
+  function tick() {
+    const el = qs("#trialSalesCountdown");
+    if (!el) return;
+    if (!state.trialUntil || state.trialUntil <= Date.now()) {
+      el.textContent = "0d 00h 00m 00s remaining";
+      return;
+    }
+    el.textContent = formatTrialCountdown(state.trialUntil);
+  }
+  tick();
+  _trialSalesCountdownInterval = setInterval(tick, 1000);
+}
+
+function openTrialSalesModal() {
+  render();
+  openModal("#trialSalesModal");
+  startTrialSalesCountdownInterval();
+}
+
+function closeTrialSalesModal() {
+  if (_trialSalesCountdownInterval) {
+    clearInterval(_trialSalesCountdownInterval);
+    _trialSalesCountdownInterval = null;
+  }
+  closeModal("#trialSalesModal");
 }
 
 function injectTrialNudgeBannerIfNeeded() {

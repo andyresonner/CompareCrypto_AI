@@ -13,7 +13,7 @@ export function App(state) {
   else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
 
-  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}${CheckoutModal(state)}${TrialModal(state)}`;
+  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}${CheckoutModal(state)}${TrialModal(state)}${TrialSalesModal(state)}`;
 }
 
 /* ---------- Top Nav ---------- */
@@ -35,15 +35,38 @@ function TopNav(state) {
 
   const points = (state.lifetimeCompares || 0) * 10;
 
+  const trialButtonHtml = trialActive
+    ? `
+        <button class="accountItem highlight" id="acctTrialBtn" role="menuitem">
+          <div>
+            <div class="accountItemTitle">Your Premium Trial ›</div>
+            <div class="muted small">Unlimited compares &amp; signals</div>
+          </div>
+          <span class="trialActivePill">Active</span>
+        </button>
+      `
+    : `
+        <button class="accountItem highlight" id="acctTrialBtn" role="menuitem">
+          <div>
+            <div class="accountItemTitle">3-day free trial</div>
+            <div class="muted small">Limited offer for active users</div>
+          </div>
+          <span class="pillLite">New</span>
+        </button>
+      `;
+
   return `
       <div class="nav">
-        <div class="brand">
-          <div class="logo">◈</div>
-          <div>
-            <div class="brandName">CompareCrypto.ai</div>
-            <div class="brandTag">AI-powered crypto intelligence</div>
+        <a href="#compare" class="brand brandLink">
+          <img id="brandLogoImg" src="/comparelogo.png" alt="CompareCrypto.ai" style="height:36px;width:auto;display:block;" onerror="this.style.display='none';var f=document.getElementById('brandFallback');if(f)f.style.display='flex';" />
+          <div id="brandFallback" class="brandFallback" style="display:none;">
+            <div class="logo">◈</div>
+            <div>
+              <div class="brandName">CompareCrypto.ai</div>
+              <div class="brandTag">AI-powered crypto intelligence</div>
+            </div>
           </div>
-        </div>
+        </a>
 
         <div class="links">
           <a class="${is("compare")}" href="#compare">Compare</a>
@@ -76,13 +99,7 @@ function TopNav(state) {
                       <span class="muted small">›</span>
                     </button>
 
-                    <button class="accountItem highlight" id="acctTrialBtn" role="menuitem">
-                      <div>
-                        <div class="accountItemTitle">3-day free trial</div>
-                        <div class="muted small">Limited offer for active users</div>
-                      </div>
-                      <span class="pillLite">New</span>
-                    </button>
+                    ${trialButtonHtml}
 
                     <button class="accountItem" id="acctOffersBtn" role="menuitem">
                       <span>Offers</span>
@@ -115,6 +132,7 @@ function ComparePage(state) {
   const used = usage.used ?? 0;
   const limit = usage.freeLimit ?? 3;
   const bumped = !!state.usageBumped;
+  const premiumActive = !!(state.trialUntil && state.trialUntil > Date.now());
 
   const modeLabel =
     mode === "assets"
@@ -185,10 +203,13 @@ function ComparePage(state) {
             ${modeRow}
           </div>
 
-          <div class="compareCard">
+          <div class="compareCard${premiumActive ? " compareCardPremium" : ""}">
             ${state.reopenContext ? ReopenWorkspacePanel(state) : ""}
+            ${premiumActive ? '<div class="compareCardPremiumBadge">Premium</div>' : ""}
 
-            <div class="guideRow">
+            ${premiumActive
+              ? `<div class="guideRow guideRowCollapsed"><span class="muted small">Pick assets or exchanges, then Compare.</span></div>`
+              : `<div class="guideRow">
               <div class="guideStep">
                 <span class="guideNum">1</span>
                 <span>${mode === "assets" ? "Pick 2+ assets" : "Type token or exchange"}</span>
@@ -201,12 +222,15 @@ function ComparePage(state) {
                 <span class="guideNum">3</span>
                 <span>Act on the best setup</span>
               </div>
-            </div>
+            </div>`
+            }
 
             <div class="rewardToast" id="rewardToast"></div>
 
-            <div class="searchRow">
-              <input class="input" id="search" placeholder="${placeholder}" />
+            ${premiumActive ? '<div class="premiumStatusBar">✦ Premium active — unlimited compares, full signals unlocked</div>' : ""}
+
+            <div class="searchRow${premiumActive ? " searchRowPremium" : ""}">
+              <input class="input${premiumActive ? " inputPremium" : ""}" id="search" placeholder="${placeholder}" />
               <button class="cta" id="compareBtn">Compare now</button>
               <button class="btnAlt" id="saveBtn">Save view</button>
             </div>
@@ -814,7 +838,6 @@ function TrialModal(state) {
   return `
       <div class="modalBackdrop" id="trialModal">
         <div class="modal trialModalSize">
-          <a href="#" class="trialModalSkip" id="trialModalSkip">skip for now</a>
           <div class="modalTop trialModalTop">
             <div>
               <div class="trialModalHeadline">Your 3-day Premium trial is live 🎉</div>
@@ -863,6 +886,56 @@ function formatTrialCountdown(untilMs) {
   const m = Math.floor(rem / 60);
   const s = rem % 60;
   return `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s remaining`;
+}
+
+function TrialSalesModal(state) {
+  const trialUntil = state.trialUntil || Date.now();
+  const initialCountdown = formatTrialCountdown(trialUntil);
+  const compares = state.lifetimeCompares || 0;
+  const savedCount = (state.savedViews || []).length;
+  const now = Date.now();
+  const hoursLeft = state.trialUntil && state.trialUntil > now
+    ? Math.max(1, Math.ceil((state.trialUntil - now) / (60 * 60 * 1000)))
+    : 0;
+
+  return `
+      <div class="modalBackdrop" id="trialSalesModal">
+        <div class="modal trialSalesModalSize">
+          <a href="#" class="trialSalesSkip" id="trialSalesSkip">skip</a>
+          <div class="modalTop">
+            <div>
+              <div class="modalTitle">You're on Premium — make it permanent</div>
+              <div class="trialSalesCountdown" id="trialSalesCountdown">${initialCountdown}</div>
+            </div>
+            <button class="x" id="closeTrialSalesModal" aria-label="Close">✕</button>
+          </div>
+
+          <div class="trialSalesUsage">
+            You've run <b>${compares}</b> compare${compares !== 1 ? "s" : ""} and saved <b>${savedCount}</b> view${savedCount !== 1 ? "s" : ""}.
+          </div>
+
+          <div class="trialSalesLoseSection">
+            <div class="trialUnlockedTitle">What you'll lose when trial ends</div>
+            <div class="trialSalesLoseGrid">
+              <div class="trialSalesLoseItem"><span class="trialSalesLoseIcon" aria-hidden="true">✕</span><span>Community Predictions</span></div>
+              <div class="trialSalesLoseItem"><span class="trialSalesLoseIcon" aria-hidden="true">✕</span><span>Exchange Signals</span></div>
+              <div class="trialSalesLoseItem"><span class="trialSalesLoseIcon" aria-hidden="true">✕</span><span>Sentiment Alerts</span></div>
+              <div class="trialSalesLoseItem"><span class="trialSalesLoseIcon" aria-hidden="true">✕</span><span>Full Risk Intelligence</span></div>
+            </div>
+          </div>
+
+          <div class="trialSalesSocialProof">Join 2,400+ traders already on Premium</div>
+          <div class="trialSalesUrgency">Your trial expires in ${hoursLeft} hour${hoursLeft !== 1 ? "s" : ""} — upgrade now to keep everything</div>
+
+          <div class="modalCtas trialSalesCtas">
+            <button class="cta ctaTrialSales" id="trialSalesUpgradeBtn">Upgrade Now — Lock In Your Rate →</button>
+          </div>
+          <div class="trialSalesSecondary">
+            <a href="#" class="trialSalesRemindLink" id="trialSalesRemindBtn">Remind me tomorrow</a>
+          </div>
+        </div>
+      </div>
+    `;
 }
 
 function EmailInsightModal() {
