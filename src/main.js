@@ -88,6 +88,7 @@ const state = {
   communityPeekContext: null,
   communityPeekThread: [],
   communityPeekLocked: false,
+  referralCount: 0,
 };
 
 /* -------------------- DOM helpers -------------------- */
@@ -419,6 +420,9 @@ function render() {
   // ✅ IMPORTANT: if we have a last result, repaint it AFTER render
   // This fixes “compare flashes then disappears” due to re-renders.
   if (state.route === "compare") {
+    const dataSourceEl = qs("#dataSourceIndicator");
+    if (dataSourceEl && !state.lastCompareResult && !state.compareLoading) dataSourceEl.hidden = true;
+
     if (state.compareLoading) {
       renderLoadingShimmer();
     } else if (state.lastCompareResult) {
@@ -886,7 +890,21 @@ async function runCompare() {
   );
   renderLoadingShimmer();
 
-  const result = await fetchCompareResult();
+  let result;
+  try {
+    result = await fetchCompareResult();
+  } catch (err) {
+    state.compareLoading = false;
+    state.lastCompareResult = null;
+    render();
+    const body = qs("#resultBody");
+    const indicator = qs("#dataSourceIndicator");
+    if (indicator) indicator.hidden = true;
+    if (body) {
+      body.innerHTML = `<div class="resultError" role="alert">Couldn't load live data right now. Try again in a moment.</div>`;
+    }
+    return;
+  }
 
   state.compareLoading = false;
   state.lastCompareResult = result;
@@ -925,48 +943,29 @@ async function fetchCompareResult() {
   const items = [...state.selected];
 
   if (kind === "assets") {
-    if (DataAPI?.compareAssets) {
-      try {
-        const rows = await DataAPI.compareAssets(items);
-        return { kind, items, rows, ts: Date.now() };
-      } catch {}
+    if (!DataAPI?.compareAssets) {
+      throw new Error("Couldn't load live data right now. Try again in a moment.");
     }
-
-    const rows = items.map((sym) => ({
-      sym,
-      tag: tagline(sym),
-      price: randomPrice(sym),
-      change24h: randomChange(sym),
-      change7d: randomChange(sym),
-      sentiment: randomSentiment(sym),
-      risk: randomRisk(sym),
-      prediction24h: "Range-bound",
-      mcap: randomMcap(sym),
-    }));
-
-    return { kind, items, rows, ts: Date.now() };
+    const out = await DataAPI.compareAssets(items);
+    const rows = Array.isArray(out) ? out : (out?.rows ?? []);
+    if (!rows.length) {
+      throw new Error("Couldn't load live data right now. Try again in a moment.");
+    }
+    const fromCache = out?.fromCache ?? false;
+    return { kind, items, rows, ts: Date.now(), dataSource: fromCache ? "cached" : "live" };
   }
 
   const q = (qs("#search")?.value || "").trim() || state.lastQuery || "BTC";
   state.lastQuery = String(q).toUpperCase();
 
-  if (DataAPI?.scanExchanges) {
-    try {
-      const rows = await DataAPI.scanExchanges(state.lastQuery, items);
-      return { kind, items: [q], rows, ts: Date.now() };
-    } catch {}
+  if (!DataAPI?.scanExchanges) {
+    throw new Error("Couldn't load live data right now. Try again in a moment.");
   }
-
-  const exchanges = ["Coinbase", "Kraken", "Binance", "Bybit", "OKX", "Bitstamp", "KuCoin"];
-  const rows = exchanges.slice(0, 6).map((ex) => ({
-    exchange: ex,
-    price: randomPrice(state.lastQuery),
-    spread: (Math.random() * 0.8 + 0.1).toFixed(2) + "%",
-    liquidity: ["High", "Medium", "Low"][Math.floor(Math.random() * 3)],
-    signal: "Monitor",
-  }));
-
-  return { kind, items: [state.lastQuery], rows, ts: Date.now() };
+  const rows = await DataAPI.scanExchanges(state.lastQuery, items);
+  if (!rows?.length) {
+    throw new Error("Couldn't load live data right now. Try again in a moment.");
+  }
+  return { kind, items: [q], rows, ts: Date.now(), dataSource: "live" };
 }
 
 function renderLoadingShimmer() {
@@ -1002,6 +1001,14 @@ function renderResults(result, { animate } = { animate: true }) {
   const body = qs("#resultBody");
   const learn = qs("#learnPanel");
   if (!body) return;
+
+  const indicator = qs("#dataSourceIndicator");
+  if (indicator) {
+    const src = result?.dataSource ?? "live";
+    indicator.textContent = src === "cached" ? "⚠ Cached" : "🟢 Live data";
+    indicator.className = "dataSourceIndicator " + (src === "cached" ? "cached" : "live");
+    indicator.hidden = false;
+  }
 
   if (!result?.rows?.length) {
     body.innerHTML = `<div class="muted small" style="padding:10px 6px;">No results.</div>`;
@@ -1454,7 +1461,8 @@ async function fetchMarketPulseRows() {
   // Crypto from existing data source
   try {
     if (DataAPI?.compareAssets) {
-      const btc = await DataAPI.compareAssets(["BTC"]);
+      const out = await DataAPI.compareAssets(["BTC"]);
+      const btc = Array.isArray(out) ? out : (out?.rows ?? []);
       if (btc?.[0]) {
         fallback[0] = {
           key: "btc",
@@ -1571,7 +1579,8 @@ async function fetchCommunityPulseRows() {
 
   try {
     if (DataAPI?.compareAssets) {
-      const rows = await DataAPI.compareAssets(universe);
+      const out = await DataAPI.compareAssets(universe);
+      const rows = Array.isArray(out) ? out : (out?.rows ?? []);
       const scored = [];
       for (const sym of universe) {
         const row = rows.find((r) => r.sym === sym);
@@ -1709,6 +1718,26 @@ function wireAccountPage() {
       status.textContent = "Couldn’t update password. Try again.";
     }
   });
+
+  const referralCountEl = qs("#referralCountLine");
+  if (referralCountEl) {
+    const code = state.referralCode || getOrCreateReferralCode();
+    supabase
+      .from("referrals")
+      .select("*", { count: "exact", head: true })
+      .eq("referrer_code", code)
+      .then(({ count }) => {
+        const n = typeof count === "number" ? count : loadJSON(LS.referralCount, 0);
+        state.referralCount = n;
+        saveJSON(LS.referralCount, n);
+        if (referralCountEl) referralCountEl.textContent = `You've referred ${n} friend${n !== 1 ? "s" : ""} — ${n} × 3 days earned`;
+      })
+      .catch(() => {
+        const n = loadJSON(LS.referralCount, 0);
+        state.referralCount = n;
+        if (referralCountEl) referralCountEl.textContent = `You've referred ${n} friend${n !== 1 ? "s" : ""} — ${n} × 3 days earned`;
+      });
+  }
 
   const billingCountdownEl = qs("#billingCountdown");
   if (billingCountdownEl && state.trialUntil && state.trialUntil > Date.now()) {
@@ -2118,9 +2147,25 @@ async function submitAuth() {
         const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
         state.trialUntil = (state.trialUntil && state.trialUntil > Date.now() ? state.trialUntil : Date.now()) + threeDaysMs;
         saveJSON(LS.trialUntil, state.trialUntil);
+
         try {
+          await supabase.from("referrals").insert({
+            referrer_code: referredBy,
+            referred_email: email,
+          });
+          const { count } = await supabase
+            .from("referrals")
+            .select("*", { count: "exact", head: true })
+            .eq("referrer_code", referredBy);
+          const total = typeof count === "number" ? count : 0;
+          const myCode = getOrCreateReferralCode();
+          if (myCode === referredBy) {
+            saveJSON(LS.referralCount, total);
+            state.referralCount = total;
+          }
           localStorage.removeItem(LS.referredBy);
         } catch {}
+
         nudgeRewardToast("3 days Premium unlocked via referral 🎉");
         confettiMini();
       }

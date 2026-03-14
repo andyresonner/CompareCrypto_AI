@@ -257,6 +257,7 @@ function ComparePage(state) {
               <div class="resultLine ok">
                 <div class="resultTop">
                   <div class="resultTitle"></div>
+                  <span id="dataSourceIndicator" class="dataSourceIndicator" aria-hidden="true"></span>
                   ${sourcePill}
                 </div>
               </div>
@@ -548,7 +549,7 @@ function ReferralCard(state) {
                 <a href="mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}" class="referralShareBtn referralShareLink" title="Share via email">✉️ Email</a>
                 <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener noreferrer" class="referralShareBtn referralShareLink" title="Share on X">𝕏 Share</a>
               </div>
-              <div class="referralCountLine muted small">You've referred ${refCount} friend${refCount !== 1 ? "s" : ""} — ${refCount} × 3 days earned</div>
+              <div id="referralCountLine" class="referralCountLine muted small">You've referred ${refCount} friend${refCount !== 1 ? "s" : ""} — ${refCount} × 3 days earned</div>
             </div>`;
 }
 

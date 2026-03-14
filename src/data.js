@@ -3,6 +3,12 @@
 // If you ever hit CORS/rate limits, we’ll add a tiny proxy backend.
 
 const CG = "https://api.coingecko.com/api/v3";
+const COINCAP = "https://api.coincap.io/v2";
+
+const CG_HEADERS = {
+  "Accept": "application/json",
+  "User-Agent": "CompareCrypto/1.0 (https://comparecrypto.ai; compare tool)",
+};
 
 // Small “fast map” so common tickers work instantly
 const QUICK_MAP = {
@@ -38,17 +44,19 @@ function cacheSet(key, val, ttlMs = 60_000) {
   } catch {}
 }
 
-async function fetchJson(url) {
+async function fetchJson(url, headers = {}) {
   const res = await fetch(url, {
-    headers: {
-      "accept": "application/json",
-    },
+    headers: { "Accept": "application/json", ...headers },
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`API error ${res.status}: ${text || url}`);
   }
   return res.json();
+}
+
+async function fetchJsonCoinGecko(url) {
+  return fetchJson(url, CG_HEADERS);
 }
 
 export function normalizeSymbol(input) {
@@ -95,7 +103,7 @@ export async function resolveCoin(query) {
   if (cached) return cached;
 
   // CoinGecko search
-  const data = await fetchJson(`${CG}/search?query=${encodeURIComponent(q)}`);
+  const data = await fetchJsonCoinGecko(`${CG}/search?query=${encodeURIComponent(q)}`);
   const best = data?.coins?.[0];
   if (!best?.id) {
     throw new Error(`Couldn't find coin for "${q}". Try BTC, ETH, SOL, etc.`);
@@ -112,10 +120,10 @@ export async function resolveCoin(query) {
 }
 
 export async function getMarketsByIds(ids, vs = "usd") {
-  if (!ids?.length) return [];
+  if (!ids?.length) return { data: [], fromCache: false };
   const key = `cc_mk_${vs}_${ids.join(",")}`;
   const cached = cacheGet(key);
-  if (cached) return cached;
+  if (cached) return { data: cached, fromCache: true };
 
   const url =
     `${CG}/coins/markets?vs_currency=${encodeURIComponent(vs)}` +
@@ -123,9 +131,9 @@ export async function getMarketsByIds(ids, vs = "usd") {
     `&price_change_percentage=24h,7d` +
     `&sparkline=false`;
 
-  const data = await fetchJson(url);
-  cacheSet(key, data, 30_000);
-  return data;
+  const data = await fetchJsonCoinGecko(url);
+  cacheSet(key, data, 60_000);
+  return { data, fromCache: false };
 }
 
 // For exchange comparison: pull tickers for a given coin.
@@ -137,14 +145,56 @@ export async function getCoinTickers(coinId) {
 
   // per_page=100 to get a decent slice
   const url = `${CG}/coins/${encodeURIComponent(coinId)}/tickers?include_exchange_logo=false&order=volume_desc&per_page=100&page=1`;
-  const data = await fetchJson(url);
-  cacheSet(key, data, 30_000);
+  const data = await fetchJsonCoinGecko(url);
+  cacheSet(key, data, 60_000);
   return data;
 }
 
-// Compare multiple assets — real prices from CoinGecko
+// Map symbol to CoinCap asset id (same as CoinGecko id for most)
+function symbolToCoinCapId(sym) {
+  const u = String(sym).trim().toUpperCase();
+  return QUICK_MAP[u]?.id ?? String(sym).trim().toLowerCase();
+}
+
+// CoinCap fallback: map symbol list to same row shape as compareAssets (no 7d from CoinCap — use 0)
+async function compareAssetsCoinCap(symbols) {
+  if (!symbols?.length) return { rows: [], fromCache: false };
+  const ids = [...new Set(symbols.map(symbolToCoinCapId))];
+  const url = `${COINCAP}/assets?ids=${ids.join(",")}`;
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error(`CoinCap error ${res.status}`);
+  const json = await res.json();
+  const list = json?.data ?? [];
+  const bySymbol = new Map(list.map((a) => [String(a.symbol).toUpperCase(), a]));
+  const rows = [];
+  for (const sym of symbols) {
+    const u = String(sym).trim().toUpperCase();
+    const a = bySymbol.get(u) ?? bySymbol.get(u.toLowerCase());
+    if (!a) continue;
+    const priceUsd = Number(a.priceUsd ?? 0);
+    const ch24 = Number(a.changePercent24Hr ?? 0);
+    const sent = sentimentFromPct(ch24);
+    const risk = Math.abs(ch24) > 6 ? "High" : Math.abs(ch24) > 3 ? "Medium" : "Low";
+    const signal =
+      ch24 > 1.5 ? "Bull trend" : ch24 < -1.5 ? "Bear pressure" : ch24 < 0 ? "Pullback" : "Range-bound";
+    rows.push({
+      sym: String(a.symbol).toUpperCase(),
+      tag: a.name ?? a.symbol,
+      price: formatMoney(priceUsd, { compact: false, maxFrac: 4 }).replace("$", ""),
+      change24h: ch24.toFixed(2),
+      change7d: "0.00",
+      sentiment: sent.label,
+      risk,
+      prediction24h: signal,
+      mcap: formatMoney(Number(a.marketCapUsd ?? 0), { compact: true }),
+    });
+  }
+  return { rows, fromCache: false };
+}
+
+// Compare multiple assets — CoinGecko first, CoinCap fallback; return { rows, fromCache }
 export async function compareAssets(symbols) {
-  if (!symbols?.length) return [];
+  if (!symbols?.length) return { rows: [], fromCache: false };
   const ids = [];
   const resolved = [];
   for (const sym of symbols) {
@@ -156,12 +206,32 @@ export async function compareAssets(symbols) {
       // skip unknown
     }
   }
-  if (!ids.length) return [];
 
-  const markets = await getMarketsByIds(ids);
-  const byId = new Map(markets.map((m) => [m.id, m]));
+  let marketsData = [];
+  let fromCache = false;
 
-  return resolved
+  if (ids.length > 0) {
+    try {
+      const out = await getMarketsByIds(ids);
+      marketsData = Array.isArray(out?.data) ? out.data : out?.data ?? [];
+      fromCache = !!out?.fromCache;
+    } catch {
+      // fallback to CoinCap
+      const cap = await compareAssetsCoinCap(symbols);
+      return cap;
+    }
+  }
+
+  if (!marketsData.length && symbols.length > 0) {
+    try {
+      return await compareAssetsCoinCap(symbols);
+    } catch (e) {
+      throw new Error("Could not load asset data. Try again in a moment.");
+    }
+  }
+
+  const byId = new Map(marketsData.map((m) => [m.id, m]));
+  const rows = resolved
     .filter((r) => byId.has(r.id))
     .map((r) => {
       const m = byId.get(r.id);
@@ -189,6 +259,8 @@ export async function compareAssets(symbols) {
         mcap: formatMoney(m?.market_cap ?? 0, { compact: true }),
       };
     });
+
+  return { rows, fromCache };
 }
 
 // Scan exchanges for an asset — real prices from CoinGecko tickers
