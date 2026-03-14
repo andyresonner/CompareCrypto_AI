@@ -453,16 +453,7 @@ function AccountPage(state) {
           </div>
 
           <div class="grid2" style="margin-top:14px;">
-            <div class="plan">
-              <div class="planTitle">Billing</div>
-              <div class="muted small" style="margin-top:4px;">You're currently on the Free plan.</div>
-              <ul>
-                <li>Choose Monthly or Yearly in the Pricing page.</li>
-                <li>After checkout is connected, invoices and billing controls appear here.</li>
-              </ul>
-              <button class="btnFull" id="billingManageBtn">See Premium options</button>
-            </div>
-
+            ${BillingCard(state)}
             ${ReferralCard(state)}
           </div>
         </div>
@@ -470,7 +461,65 @@ function AccountPage(state) {
     `;
 }
 
+function BillingCard(state) {
+  const now = Date.now();
+  const trialUntil = state.trialUntil;
+  const trialActive = trialUntil && trialUntil > now;
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  const premiumPaying = trialActive && (trialUntil - now) > thirtyDaysMs;
+
+  if (premiumPaying) {
+    const planLabel = state.billingPlan === "yearly" ? "Yearly" : state.billingPlan === "monthly" ? "Monthly" : "";
+    const planLine = planLabel ? ` (${planLabel})` : "";
+    return `
+            <div class="plan billingCard">
+              <div class="planTitle">Billing</div>
+              <div class="billingHeadline">You're on Premium ✦</div>
+              <div class="muted small" style="margin-top:6px;">Unlimited compares, full signals, all features unlocked${planLine}</div>
+              <button class="btnFull" id="billingManageBtn" style="margin-top:14px;">Manage Billing →</button>
+            </div>`;
+  }
+
+  if (trialActive) {
+    const countdownShort = `Expires in ${formatTrialCountdownShort(trialUntil)}`;
+    return `
+            <div class="plan billingCard billingCardTrial">
+              <div class="planTitle">Billing</div>
+              <div class="billingHeadline">You're on Premium Trial</div>
+              <div class="billingCountdown" id="billingCountdown">${escapeHtml(countdownShort)}</div>
+              <div class="billingUrgency">Lock in your rate before your trial ends</div>
+              <button class="cta btnFull" id="billingUpgradeNowBtn" style="margin-top:14px;">Upgrade Now — from $20/month →</button>
+              <div class="muted small" style="margin-top:10px;">
+                <a href="#" id="billingYearlyLink">View yearly plan (save 17%)</a>
+              </div>
+            </div>`;
+  }
+
+  return `
+            <div class="plan billingCard">
+              <div class="planTitle">Billing</div>
+              <div class="billingHeadline">You're on the Free plan</div>
+              <div class="muted small" style="margin-top:6px;">3 free compares per day. No signals. No predictions.</div>
+              <button class="cta btnFull" id="billingUnlockPremiumBtn" style="margin-top:14px;">Unlock Premium →</button>
+              <div class="muted small" style="margin-top:10px;">
+                <a href="#" id="billingTrialLink">Or start a 3-day free trial</a>
+              </div>
+            </div>`;
+}
+
+function formatTrialCountdownShort(untilMs) {
+  const now = Date.now();
+  let rem = Math.max(0, Math.floor((untilMs - now) / 1000));
+  const d = Math.floor(rem / 86400);
+  rem %= 86400;
+  const h = Math.floor(rem / 3600);
+  rem %= 3600;
+  const m = Math.floor(rem / 60);
+  return `${d}d ${h}h ${m}m`;
+}
+
 function ReferralCard(state) {
+  const unlocked = !!state.referralUnlocked;
   const referralCode = state.referralCode || "------";
   const refCount = state.referralCount ?? 0;
   const baseUrl = "https://comparecrypto.ai";
@@ -479,12 +528,21 @@ function ReferralCard(state) {
   const emailBody = `Hey, I've been using CompareCrypto.ai to compare crypto assets and exchange rates. Use my referral link to get 3 days of Premium free: ${refLink}`;
   const tweetText = encodeURIComponent(`Just found @CompareCryptoAI — the best way to compare crypto assets and exchange rates. Get 3 days Premium free with my link: ${refLink}`);
 
+  if (!unlocked) {
+    return `
+            <div class="plan referralCard referralCardLocked">
+              <div class="referralHeadline">You have a referral reward waiting</div>
+              <div class="referralSubline muted small">Unlock your personal referral link and give friends 3 days Premium free — you get 3 days too for every friend who joins</div>
+              <button type="button" class="cta btnFull referralUnlockBtn" id="referralUnlockBtn">🔓 Unlock My Referral Link</button>
+            </div>`;
+  }
+
   return `
-            <div class="plan referralCard">
-              <div class="planTitle">Refer & Earn</div>
-              <div class="referralHeadline">Refer a friend, both get 3 days Premium free</div>
+            <div class="plan referralCard referralCardUnlocked">
+              <div class="referralHeadline">Refer & Earn — give 3 days, get 3 days</div>
               <div class="muted small" style="margin-top:6px;">Your referral code</div>
               <div class="referralCodeBlock" id="referralCodeDisplay">${escapeHtml(referralCode)}</div>
+              <div class="muted small" style="margin-top:10px;">Share your link:</div>
               <div class="referralShareRow">
                 <button type="button" class="referralShareBtn" id="referralCopyBtn" title="Copy link">📋 Copy link</button>
                 <a href="mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}" class="referralShareBtn referralShareLink" title="Share via email">✉️ Email</a>

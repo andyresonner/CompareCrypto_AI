@@ -51,6 +51,8 @@ const LS = {
   referralCode: "cc_referral_code_v1",
   referredBy: "cc_referred_by_v1",
   referralCount: "cc_referral_count_v1",
+  referralUnlocked: "cc_referral_unlocked_v1",
+  billingPlan: "cc_billing_plan_v1",
 };
 
 const state = {
@@ -391,6 +393,8 @@ function openExchangeModal(exchange) {
 function render() {
   state.referralCode = getOrCreateReferralCode();
   state.referralCount = loadJSON(LS.referralCount, 0);
+  state.referralUnlocked = !!loadJSON(LS.referralUnlocked, false);
+  state.billingPlan = loadJSON(LS.billingPlan, null);
 
   root.innerHTML = App(state);
 
@@ -1634,6 +1638,24 @@ function wireAccountPage() {
   if (state.route !== "account") return;
 
   on("#billingManageBtn", "click", () => go("pricing"));
+  on("#billingUpgradeNowBtn", "click", () => openCheckoutModal("monthly"));
+  on("#billingYearlyLink", "click", (e) => {
+    e.preventDefault();
+    openCheckoutModal("yearly");
+  });
+  on("#billingUnlockPremiumBtn", "click", () => go("pricing"));
+  on("#billingTrialLink", "click", (e) => {
+    e.preventDefault();
+    openTrialModal();
+  });
+
+  on("#referralUnlockBtn", "click", () => {
+    saveJSON(LS.referralUnlocked, true);
+    state.referralUnlocked = true;
+    confettiMini();
+    nudgeRewardToast("Referral link unlocked 🎉");
+    render();
+  });
 
   on("#referralCopyBtn", "click", () => {
     const code = state.referralCode || getOrCreateReferralCode();
@@ -1687,6 +1709,20 @@ function wireAccountPage() {
       status.textContent = "Couldn’t update password. Try again.";
     }
   });
+
+  const billingCountdownEl = qs("#billingCountdown");
+  if (billingCountdownEl && state.trialUntil && state.trialUntil > Date.now()) {
+    function updateBillingCountdown() {
+      if (!state.trialUntil || state.trialUntil <= Date.now()) {
+        billingCountdownEl.textContent = "Expired";
+        return;
+      }
+      billingCountdownEl.textContent = `Expires in ${formatTrialCountdownShort(state.trialUntil)}`;
+    }
+    updateBillingCountdown();
+    const t = setInterval(updateBillingCountdown, 60 * 1000);
+    window.addEventListener("hashchange", () => clearInterval(t), { once: true });
+  }
 }
 
 function wireResetPage() {
@@ -2179,6 +2215,9 @@ async function handleCheckoutPay() {
 
   state.trialUntil = Date.now() + 365 * 24 * 60 * 60 * 1000;
   saveJSON(LS.trialUntil, state.trialUntil);
+  const plan = state._checkoutPlan || "monthly";
+  saveJSON(LS.billingPlan, plan);
+  state.billingPlan = plan;
 
   setTimeout(() => {
     closeCheckoutModal();
@@ -2200,6 +2239,17 @@ function formatTrialCountdown(untilMs) {
   const m = Math.floor(rem / 60);
   const s = rem % 60;
   return `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s remaining`;
+}
+
+function formatTrialCountdownShort(untilMs) {
+  const now = Date.now();
+  let rem = Math.max(0, Math.floor((untilMs - now) / 1000));
+  const d = Math.floor(rem / 86400);
+  rem %= 86400;
+  const h = Math.floor(rem / 3600);
+  rem %= 3600;
+  const m = Math.floor(rem / 60);
+  return `${d}d ${h}h ${m}m`;
 }
 
 function startTrialCountdownInterval() {

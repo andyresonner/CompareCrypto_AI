@@ -1803,12 +1803,68 @@ button {
   margin: 8px 0;
 }
 
-/* Referral card — Account page */
+/* Referral card — Account page (locked / unlocked) */
+.referralCard.referralCardLocked {
+  background: var(--bg-darker);
+  border-color: rgba(88, 166, 255, 0.25);
+  box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.15), 0 0 24px rgba(88, 166, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+.referralCard.referralCardLocked::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(110deg, transparent 0%, transparent 35%, rgba(88, 166, 255, 0.4) 50%, transparent 65%, transparent 100%);
+  background-size: 200% 100%;
+  animation: referralShimmer 2.5s ease-in-out infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+@keyframes referralShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.referralCardLocked .referralHeadline {
+  margin-top: 0;
+}
+.referralCardLocked .referralSubline {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.referralCardLocked .referralUnlockBtn {
+  margin-top: 18px;
+  padding: 14px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 0 20px rgba(88, 166, 255, 0.25);
+}
+.referralCard.referralCardUnlocked {
+  animation: referralReveal 350ms ease forwards;
+}
+@keyframes referralReveal {
+  from {
+    opacity: 0.95;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .referralCard .referralHeadline {
   font-weight: 700;
   font-size: 14px;
   color: var(--text);
   margin-top: 8px;
+}
+.referralCard.referralCardUnlocked .referralHeadline {
+  margin-top: 0;
 }
 
 .referralCodeBlock {
@@ -1859,6 +1915,36 @@ button {
 .referralCountLine {
   margin-top: 14px;
   font-size: 13px;
+}
+
+/* Billing card — dynamic states */
+.billingCard .billingHeadline {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text);
+  margin-top: 4px;
+}
+.billingCard .billingCountdown {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}
+.billingCard .billingUrgency {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e3b341;
+}
+.billingCardTrial .billingUrgency {
+  color: #e3b341;
+}
+.billingCard a {
+  color: var(--primary);
+}
+.billingCard a:hover {
+  text-decoration: underline;
 }
 
 .noteBox {
