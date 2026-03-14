@@ -2260,7 +2260,6 @@ async function handleCheckoutPay() {
 
   state.trialUntil = Date.now() + 365 * 24 * 60 * 60 * 1000;
   saveJSON(LS.trialUntil, state.trialUntil);
-  const plan = state._checkoutPlan || "monthly";
   saveJSON(LS.billingPlan, plan);
   state.billingPlan = plan;
 
