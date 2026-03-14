@@ -48,6 +48,9 @@ const LS = {
   testCheckoutSubmissions: "cc_test_checkout_submissions",
   trialUntil: "cc_trial_until_v1",
   remindTomorrow: "cc_remind_tomorrow_v1",
+  referralCode: "cc_referral_code_v1",
+  referredBy: "cc_referred_by_v1",
+  referralCount: "cc_referral_count_v1",
 };
 
 const state = {
@@ -153,6 +156,22 @@ async function persistWaitlistEmail(email, source = "pricing_waitlist") {
   }
 }
 
+function referralCodeGen() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
+
+function getOrCreateReferralCode() {
+  let code = loadJSON(LS.referralCode, null);
+  if (!code || typeof code !== "string" || code.length !== 6) {
+    code = referralCodeGen();
+    saveJSON(LS.referralCode, code);
+  }
+  return code;
+}
+
 function hydrateFromStorage() {
   state.savedViews = loadJSON(LS.saved, []);
   state.streak = loadJSON(LS.streak, { days: 0, best: 0, lastDayKey: "" });
@@ -166,6 +185,16 @@ function hydrateFromStorage() {
   state._authNudgeShown = !!loadJSON(LS.authNudge, false);
   const storedTrial = loadJSON(LS.trialUntil, null);
   state.trialUntil = typeof storedTrial === "number" && storedTrial > Date.now() ? storedTrial : null;
+
+  getOrCreateReferralCode();
+
+  const search = location.search || "";
+  const hash = location.hash || "";
+  const refMatch = search.match(/[?&]ref=([^&]+)/) || hash.match(/[?&]ref=([^&]+)/);
+  if (refMatch && refMatch[1]) {
+    const refCode = String(refMatch[1]).trim().toUpperCase().slice(0, 20);
+    if (refCode) saveJSON(LS.referredBy, refCode);
+  }
 }
 
 function getAlertCreditMap() {
@@ -360,6 +389,9 @@ function openExchangeModal(exchange) {
 /* -------------------- Rendering -------------------- */
 
 function render() {
+  state.referralCode = getOrCreateReferralCode();
+  state.referralCount = loadJSON(LS.referralCount, 0);
+
   root.innerHTML = App(state);
 
   injectTrialNudgeBannerIfNeeded();
@@ -1603,6 +1635,19 @@ function wireAccountPage() {
 
   on("#billingManageBtn", "click", () => go("pricing"));
 
+  on("#referralCopyBtn", "click", () => {
+    const code = state.referralCode || getOrCreateReferralCode();
+    const link = `https://comparecrypto.ai?ref=${code}`;
+    const btn = qs("#referralCopyBtn");
+    navigator.clipboard.writeText(link).then(() => {
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "Copied ✓";
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      }
+    }).catch(() => {});
+  });
+
   on("#sendResetLinkBtn", "click", async () => {
     const email = state.user?.email;
     const status = qs("#accountStatus");
@@ -1828,11 +1873,6 @@ function wireModals() {
     go("compare");
   });
 
-  on("#closeTrialSalesModal", "click", closeTrialSalesModal);
-  on("#trialSalesSkip", "click", (e) => {
-    e.preventDefault();
-    closeTrialSalesModal();
-  });
   on("#trialSalesUpgradeBtn", "click", () => {
     closeTrialSalesModal();
     openCheckoutModal("monthly");
@@ -1846,10 +1886,10 @@ function wireModals() {
     closeTrialSalesModal();
   });
 
-  // backdrop close
+  // backdrop close (trial sales modal cannot be closed by backdrop)
   qsa(".modalBackdrop").forEach((b) => {
     b.addEventListener("click", (e) => {
-      if (e.target === b) b.classList.remove("show");
+      if (e.target === b && b.id !== "trialSalesModal") b.classList.remove("show");
     });
   });
 }
@@ -2035,7 +2075,21 @@ async function submitAuth() {
       state.user = data?.user || null;
       state.alertCredits = state.user ? getUserAlertCredits() : 0;
       status.textContent = "✅ Account created. You’re in!";
-    } else {
+    }
+
+      const referredBy = loadJSON(LS.referredBy, null);
+      if (referredBy && state._authMode === "signup") {
+        const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+        state.trialUntil = (state.trialUntil && state.trialUntil > Date.now() ? state.trialUntil : Date.now()) + threeDaysMs;
+        saveJSON(LS.trialUntil, state.trialUntil);
+        try {
+          localStorage.removeItem(LS.referredBy);
+        } catch {}
+        nudgeRewardToast("3 days Premium unlocked via referral 🎉");
+        confettiMini();
+      }
+
+    if (!state._authMode || state._authMode !== "signup") {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
       if (error) throw error;
       state.user = data?.user || null;

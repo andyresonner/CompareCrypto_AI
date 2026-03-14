@@ -58,14 +58,8 @@ function TopNav(state) {
   return `
       <div class="nav">
         <a href="#compare" class="brand brandLink">
-          <img id="brandLogoImg" src="/comparelogo.png" alt="CompareCrypto.ai" style="height:36px;width:auto;display:block;" onerror="this.style.display='none';var f=document.getElementById('brandFallback');if(f)f.style.display='flex';" />
-          <div id="brandFallback" class="brandFallback" style="display:none;">
-            <div class="logo">◈</div>
-            <div>
-              <div class="brandName">CompareCrypto.ai</div>
-              <div class="brandTag">AI-powered crypto intelligence</div>
-            </div>
-          </div>
+          <img src="/comparelogo.png" alt="CompareCrypto.ai" style="height:36px; width:auto; display:block;" onerror="this.style.display='none'" />
+          <span class="brandText">CompareCrypto.ai</span>
         </a>
 
         <div class="links">
@@ -469,19 +463,35 @@ function AccountPage(state) {
               <button class="btnFull" id="billingManageBtn">See Premium options</button>
             </div>
 
-            <div class="plan">
-              <div class="planTitle">Data & risk</div>
-              <ul>
-                <li>We only store your email + hashed password for auth.</li>
-                <li>Usage metrics (compares, saves) are anonymous aggregates.</li>
-                <li>No trading or exchange API keys are stored at this stage.</li>
-              </ul>
-              <div class="muted small">Crypto is risky; use this as decision support, not advice.</div>
-            </div>
+            ${ReferralCard(state)}
           </div>
         </div>
       </div>
     `;
+}
+
+function ReferralCard(state) {
+  const referralCode = state.referralCode || "------";
+  const refCount = state.referralCount ?? 0;
+  const baseUrl = "https://comparecrypto.ai";
+  const refLink = `${baseUrl}?ref=${referralCode}`;
+  const emailSubject = "I've been using CompareCrypto.ai — you should try it";
+  const emailBody = `Hey, I've been using CompareCrypto.ai to compare crypto assets and exchange rates. Use my referral link to get 3 days of Premium free: ${refLink}`;
+  const tweetText = encodeURIComponent(`Just found @CompareCryptoAI — the best way to compare crypto assets and exchange rates. Get 3 days Premium free with my link: ${refLink}`);
+
+  return `
+            <div class="plan referralCard">
+              <div class="planTitle">Refer & Earn</div>
+              <div class="referralHeadline">Refer a friend, both get 3 days Premium free</div>
+              <div class="muted small" style="margin-top:6px;">Your referral code</div>
+              <div class="referralCodeBlock" id="referralCodeDisplay">${escapeHtml(referralCode)}</div>
+              <div class="referralShareRow">
+                <button type="button" class="referralShareBtn" id="referralCopyBtn" title="Copy link">📋 Copy link</button>
+                <a href="mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}" class="referralShareBtn referralShareLink" title="Share via email">✉️ Email</a>
+                <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener noreferrer" class="referralShareBtn referralShareLink" title="Share on X">𝕏 Share</a>
+              </div>
+              <div class="referralCountLine muted small">You've referred ${refCount} friend${refCount !== 1 ? "s" : ""} — ${refCount} × 3 days earned</div>
+            </div>`;
 }
 
 /* ---------- Reset Password page ---------- */
@@ -783,7 +793,7 @@ function CheckoutModal(state) {
           <div class="modalTop">
             <div>
               <div class="modalTitle" id="checkoutPlanTitle">${planLabel} — ${planPrice}</div>
-              <div class="muted">Complete your purchase. All fields visible for testing.</div>
+              <div class="muted">Complete your purchase.</div>
             </div>
             <button class="x" id="closeCheckout" aria-label="Close">✕</button>
           </div>
@@ -801,7 +811,7 @@ function CheckoutModal(state) {
               </div>
 
               <div class="bullet" style="margin-top:10px;">
-                <div class="muted small">Card number (16 digits, visible)</div>
+                <div class="muted small">Card number</div>
                 <input class="input checkoutCardNumber" id="checkoutCardNumber" type="text" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19" />
               </div>
 
@@ -811,7 +821,7 @@ function CheckoutModal(state) {
                   <input class="input checkoutInput" id="checkoutExpiry" type="text" placeholder="12/28" maxlength="5" />
                 </div>
                 <div class="bullet" style="margin-top:10px; flex:1;">
-                  <div class="muted small">CVV (visible)</div>
+                  <div class="muted small">CVV</div>
                   <input class="input checkoutInput" id="checkoutCvv" type="text" inputmode="numeric" placeholder="123" maxlength="4" />
                 </div>
               </div>
@@ -901,13 +911,11 @@ function TrialSalesModal(state) {
   return `
       <div class="modalBackdrop" id="trialSalesModal">
         <div class="modal trialSalesModalSize">
-          <a href="#" class="trialSalesSkip" id="trialSalesSkip">skip</a>
           <div class="modalTop">
             <div>
               <div class="modalTitle">You're on Premium — make it permanent</div>
               <div class="trialSalesCountdown" id="trialSalesCountdown">${initialCountdown}</div>
             </div>
-            <button class="x" id="closeTrialSalesModal" aria-label="Close">✕</button>
           </div>
 
           <div class="trialSalesUsage">

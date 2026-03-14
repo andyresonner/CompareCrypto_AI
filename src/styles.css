@@ -115,18 +115,19 @@ a:hover {
 .brandLink {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 240px;
+  gap: 10px;
+  min-width: 200px;
   text-decoration: none;
   color: inherit;
 }
 .brandLink:hover {
   color: inherit;
 }
-.brandFallback {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.brandText {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
 .logo {
@@ -1802,6 +1803,64 @@ button {
   margin: 8px 0;
 }
 
+/* Referral card — Account page */
+.referralCard .referralHeadline {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  margin-top: 8px;
+}
+
+.referralCodeBlock {
+  margin-top: 8px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke-strong);
+  background: var(--surface-elevated);
+  font-family: ui-monospace, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text);
+}
+
+.referralShareRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.referralShareBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke-strong);
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.referralShareBtn:hover {
+  border-color: var(--primary);
+  background: rgba(88, 166, 255, 0.08);
+}
+.referralShareLink {
+  text-decoration: none;
+}
+.referralShareLink:hover {
+  color: var(--text);
+}
+
+.referralCountLine {
+  margin-top: 14px;
+  font-size: 13px;
+}
+
 .noteBox {
   margin-top: 20px;
   border-radius: var(--radius-md);
@@ -2146,19 +2205,6 @@ button {
 /* Trial sales modal — premium upsell when trial already active */
 .modal.trialSalesModalSize {
   width: min(500px, 100%);
-}
-
-.trialSalesSkip {
-  position: absolute;
-  top: 16px;
-  right: 52px;
-  font-size: 12px;
-  color: var(--muted2);
-  text-decoration: none;
-  z-index: 1;
-}
-.trialSalesSkip:hover {
-  color: var(--muted);
 }
 
 .trialSalesCountdown {
