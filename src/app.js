@@ -319,7 +319,7 @@ function DashboardPage(state) {
 
             <div class="dashStoryCtas">
               <button class="btnMini" id="dashHowBtn">How to use this in 60s</button>
-              ${state.user ? `<button class="btnMiniGhost btnWithIcon" id="dashEmailInsightBtn"><span aria-hidden="true">✉</span><span>Get weekly insight email</span></button>` : `<button class="btnMiniGhost" id="dashSignupBtn">Create free account</button>`}
+              ${state.user ? `<button class="btnMiniGhost btnWithIcon" id="dashEmailInsightBtn"><span aria-hidden="true">📩</span><span>Get weekly insight email</span></button>` : `<button class="btnMiniGhost" id="dashSignupBtn">Create free account</button>`}
             </div>
           </div>
 
@@ -531,11 +531,10 @@ function ReferralCard(state) {
   return `
             <div class="plan referralCard">
               <div class="referralHeadline">Refer & Earn — give 3 days, get 3 days</div>
-              <div class="referralRevealTeaser">
-                <span class="referralRevealTeaserText">Unlock your referral link</span>
+              <button type="button" class="referralRevealTeaser" id="referralRevealBtn">
+                <span class="referralRevealTeaserText">Reveal your referral code</span>
                 <span class="referralRevealChevron" aria-hidden="true">▼</span>
-              </div>
-              <button type="button" class="referralRevealBtn" id="referralRevealBtn">Show my referral link →</button>
+              </button>
               <div id="referralRevealContent" class="referralRevealContent">
                 <div class="muted small" style="margin-top:14px;">Your referral code</div>
                 <div class="referralCodeBlock" id="referralCodeDisplay">${escapeHtml(referralCode)}</div>

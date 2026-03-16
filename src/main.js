@@ -1693,8 +1693,16 @@ function wireAccountPage() {
 
   on("#referralRevealBtn", "click", () => {
     const content = qs("#referralRevealContent");
-    if (!content) return;
-    if (content.classList.contains("expanded")) return;
+    const teaserText = qs(".referralRevealTeaserText", qs(".referralCard"));
+    const chevron = qs(".referralRevealChevron", qs(".referralCard"));
+    if (!content || !teaserText || !chevron) return;
+    const isExpanded = content.classList.contains("expanded");
+    if (isExpanded) {
+      content.classList.remove("expanded");
+      teaserText.textContent = "Reveal your referral code";
+      chevron.textContent = "▼";
+      return;
+    }
     const isFirstTime = !loadJSON(LS.referralUnlocked, false);
     if (isFirstTime) {
       saveJSON(LS.referralUnlocked, true);
@@ -1703,6 +1711,8 @@ function wireAccountPage() {
       nudgeRewardToast("Referral link unlocked 🎉");
     }
     content.classList.add("expanded");
+    teaserText.textContent = "Hide referral code";
+    chevron.textContent = "▲";
   });
 
   on("#referralCopyBtn", "click", () => {

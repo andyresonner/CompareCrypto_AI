@@ -1839,30 +1839,10 @@ button {
 }
 
 .referralRevealTeaser {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.referralRevealTeaserText {
-  color: var(--muted);
-}
-
-.referralRevealChevron {
-  font-size: 10px;
-  opacity: 0.8;
-  transition: transform 200ms ease;
-}
-
-.referralCard:hover .referralRevealChevron {
-  transform: translateY(1px);
-}
-
-.referralRevealBtn {
-  margin-top: 12px;
   padding: 0;
   border: none;
   background: none;
@@ -1870,12 +1850,26 @@ button {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: color var(--transition-fast), opacity var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
-.referralRevealBtn:hover {
+.referralRevealTeaser:hover {
   color: var(--text);
   text-decoration: underline;
+}
+
+.referralRevealTeaserText {
+  color: inherit;
+}
+
+.referralRevealChevron {
+  font-size: 10px;
+  opacity: 0.9;
+  transition: transform 200ms ease;
+}
+
+.referralRevealTeaser:hover .referralRevealChevron {
+  transform: translateY(1px);
 }
 
 .referralRevealContent {
@@ -2155,6 +2149,7 @@ button {
   height: 200px;
   object-fit: cover;
   display: block;
+  transform: scale(1);
   transition: transform 400ms ease;
 }
 
