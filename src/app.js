@@ -6,6 +6,7 @@ export function App(state) {
 
   if (route === "pricing") page = PricingPage(state);
   else if (route === "dashboard") page = DashboardPage(state);
+  else if (route === "watchlist") page = WatchlistPage(state);
   else if (route === "waitlist") page = WaitlistPage(state);
   else if (route === "account") page = AccountPage(state);
   else if (route === "reset") page = ResetPasswordPage(state);
@@ -92,6 +93,11 @@ function TopNav(state) {
                   <div class="accountMenuItems">
                     <button class="accountItem" id="acctProfileBtn" role="menuitem">
                       <span>Account / Profile</span>
+                      <span class="muted small">›</span>
+                    </button>
+
+                    <button class="accountItem" id="acctWatchlistBtn" role="menuitem">
+                      <span>📋 My Watchlist</span>
                       <span class="muted small">›</span>
                     </button>
 
@@ -1738,6 +1744,87 @@ function TeaseTile(title, body, icon) {
           <span style="margin-right:6px;">${icon}</span>${escapeHtml(title)}
         </div>
         <div class="muted">${escapeHtml(body)}</div>
+      </div>
+    `;
+}
+
+function watchlistSentClass(s) {
+  const t = String(s || "").toLowerCase();
+  if (t.includes("bull")) return "bull";
+  if (t.includes("bear")) return "bear";
+  return "neu";
+}
+
+function watchlistRiskClass(r) {
+  const t = String(r || "").toLowerCase();
+  if (t.includes("high")) return "rHigh";
+  if (t.includes("med")) return "rMed";
+  return "rLow";
+}
+
+function WatchlistPage(state) {
+  const list = state.watchlist || [];
+  const empty = list.length === 0;
+
+  const cardGrid = list
+    .map((item) => {
+      const sent = String(item.sentiment || "Neutral");
+      const sentCls = watchlistSentClass(sent);
+      const risk = String(item.risk || "Medium");
+      const riskCls = watchlistRiskClass(risk);
+      const ch = Number(item.change24h || 0);
+      const chCls = ch >= 0 ? "pos" : "neg";
+      return `
+        <div class="watchlistCard" data-watchlist-sym="${escapeHtml(item.sym)}">
+          <div class="watchlistCardHead">
+            <div class="watchlistCardSym">${escapeHtml(item.sym)}</div>
+            <div class="watchlistCardName muted small">${escapeHtml(item.name || item.sym)}</div>
+          </div>
+          <div class="watchlistCardPrice">$${escapeHtml(String(item.price || "—"))}</div>
+          <div class="watchlistCardChange num ${chCls}">${ch >= 0 ? "+" : ""}${escapeHtml(String(item.change24h ?? "—"))}%</div>
+          <div class="watchlistCardPills">
+            <span class="pillSent ${sentCls}">${escapeHtml(sent)}</span>
+            <span class="pillRisk ${riskCls}">${escapeHtml(risk)}</span>
+          </div>
+          <div class="watchlistCardActions">
+            <button type="button" class="btnMini watchlistCompareBtn" data-watchlist-sym="${escapeHtml(item.sym)}">Compare →</button>
+            <button type="button" class="btnMiniGhost watchlistRemoveBtn" data-watchlist-sym="${escapeHtml(item.sym)}">Remove</button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+      <div class="bg">
+        ${TopNav(state)}
+        <div class="wrap">
+          <div class="pageHdr">
+            <div>
+              <div class="kicker">My Watchlist</div>
+              <div class="muted">Track your assets. Updated live.</div>
+            </div>
+          </div>
+
+          <div class="watchlistAddRow">
+            <input class="input watchlistAddInput" id="watchlistAddInput" type="text" placeholder="Add coin e.g. BTC, ETH, SOL" />
+            <button type="button" class="btnMini" id="watchlistAddBtn">Add</button>
+          </div>
+          <div class="muted small" id="watchlistAddError" style="margin-top:6px; min-height:20px;"></div>
+
+          ${
+            empty
+              ? `
+          <div class="watchlistEmpty">
+            <div class="watchlistEmptyTitle">No assets yet. Add coins from the compare page.</div>
+            <button type="button" class="btnInline" id="watchlistEmptyCompareBtn">Run a compare →</button>
+          </div>`
+              : `
+          <div class="watchlistGrid" id="watchlistGrid">
+            ${cardGrid}
+          </div>`
+          }
+        </div>
       </div>
     `;
 }

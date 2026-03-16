@@ -2131,6 +2131,107 @@ button {
   font-size: 12px;
 }
 
+/* Watchlist */
+.watchlistAddRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+.watchlistAddRow .input {
+  flex: 1;
+  max-width: 280px;
+}
+
+.watchlistGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.watchlistCard {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke-strong);
+  background: var(--surface-elevated);
+  padding: 18px 20px;
+  text-align: left;
+  color: var(--text);
+  transition: all var(--transition-fast);
+}
+
+.watchlistCard:hover {
+  border-color: var(--stroke-strong);
+  background: var(--surface-hover);
+}
+
+.watchlistCardHead {
+  margin-bottom: 8px;
+}
+
+.watchlistCardSym {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.watchlistCardName {
+  margin-top: 2px;
+}
+
+.watchlistCardPrice {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.watchlistCardChange {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.watchlistCardPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.watchlistCardActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.watchlistEmpty {
+  text-align: center;
+  padding: 48px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--stroke-strong);
+  background: var(--surface-elevated);
+  margin-top: 24px;
+}
+
+.watchlistEmptyTitle {
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.watchlistEmpty .btnInline {
+  margin-top: 8px;
+}
+
+.watchCell {
+  white-space: nowrap;
+}
+
+.watchCell .btnMiniGhost {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
 .tag {
   display: inline-flex;
   padding: 6px 10px;
@@ -3418,6 +3519,9 @@ button {
 }
 
 @media (max-width: 640px) {
+  .watchlistGrid {
+    grid-template-columns: 1fr;
+  }
   .navWrap .links {
     display: none;
   }

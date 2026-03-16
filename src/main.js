@@ -54,6 +54,7 @@ const LS = {
   referralCount: "cc_referral_count_v1",
   referralUnlocked: "cc_referral_unlocked_v1",
   billingPlan: "cc_billing_plan_v1",
+  watchlist: "cc_watchlist_v1",
 };
 
 const state = {
@@ -90,6 +91,7 @@ const state = {
   communityPeekThread: [],
   communityPeekLocked: false,
   referralCount: 0,
+  watchlist: [],
 };
 
 /* -------------------- DOM helpers -------------------- */
@@ -192,6 +194,10 @@ function hydrateFromStorage() {
 
   getOrCreateReferralCode();
 
+  state.watchlist = loadJSON(LS.watchlist, []);
+  if (!Array.isArray(state.watchlist)) state.watchlist = [];
+  state.watchlist = state.watchlist.slice(0, 20);
+
   const search = location.search || "";
   const hash = location.hash || "";
   const refMatch = search.match(/[?&]ref=([^&]+)/) || hash.match(/[?&]ref=([^&]+)/);
@@ -228,6 +234,163 @@ function setUserAlertCredits(n) {
   map[email.toLowerCase()] = Math.max(0, Number(n) || 0);
   saveAlertCreditMap(map);
   state.alertCredits = Math.max(0, Number(n) || 0);
+}
+
+/* -------------------- Watchlist -------------------- */
+
+const MAX_WATCHLIST = 20;
+
+function persistWatchlist() {
+  saveJSON(LS.watchlist, state.watchlist);
+}
+
+function watchlistRowToItem(row) {
+  return {
+    sym: String(row.sym || "").toUpperCase(),
+    name: row.tag || row.name || row.sym || "",
+    price: row.price != null ? String(row.price) : "—",
+    change24h: row.change24h != null ? row.change24h : "—",
+    sentiment: row.sentiment || "Neutral",
+    risk: row.risk || "Medium",
+    addedAt: row.addedAt || new Date().toISOString(),
+  };
+}
+
+function addToWatchlist(row) {
+  if (!state.watchlist) state.watchlist = [];
+  const sym = String(row.sym || "").toUpperCase();
+  if (state.watchlist.some((w) => w.sym === sym)) return;
+  if (state.watchlist.length >= MAX_WATCHLIST) return;
+  const item = watchlistRowToItem({ ...row, addedAt: new Date().toISOString() });
+  state.watchlist.push(item);
+  persistWatchlist();
+  if (state.user?.id) {
+    supabase
+      .from("watchlists")
+      .upsert(
+        { user_id: state.user.id, sym: item.sym, name: item.name, added_at: item.addedAt },
+        { onConflict: "user_id,sym" }
+      )
+      .then(() => {});
+  }
+}
+
+function removeFromWatchlist(sym) {
+  if (!state.watchlist) return;
+  const s = String(sym || "").toUpperCase();
+  state.watchlist = state.watchlist.filter((w) => w.sym !== s);
+  persistWatchlist();
+  if (state.user?.id) {
+    supabase.from("watchlists").delete().eq("user_id", state.user.id).eq("sym", s).then(() => {});
+  }
+}
+
+async function fetchWatchlistFromSupabase() {
+  if (!state.user?.id) return [];
+  const { data, error } = await supabase
+    .from("watchlists")
+    .select("sym, name, added_at")
+    .eq("user_id", state.user.id)
+    .order("added_at", { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+async function refreshWatchlistData() {
+  const list = state.watchlist || [];
+  if (state.user?.id && list.length >= 0) {
+    const remote = await fetchWatchlistFromSupabase();
+    const bySym = new Map(list.map((w) => [w.sym, { ...w }]));
+    for (const r of remote) {
+      const sym = String(r.sym || "").toUpperCase();
+      bySym.set(sym, {
+        sym,
+        name: r.name || sym,
+        addedAt: r.added_at || new Date().toISOString(),
+        price: bySym.get(sym)?.price,
+        change24h: bySym.get(sym)?.change24h,
+        sentiment: bySym.get(sym)?.sentiment,
+        risk: bySym.get(sym)?.risk,
+      });
+    }
+    state.watchlist = Array.from(bySym.values()).sort(
+      (a, b) => new Date(a.addedAt || 0) - new Date(b.addedAt || 0)
+    );
+    state.watchlist = state.watchlist.slice(0, MAX_WATCHLIST);
+  }
+  if (state.watchlist.length > 0 && DataAPI?.compareAssets) {
+    try {
+      const syms = state.watchlist.map((w) => w.sym);
+      const { rows } = await DataAPI.compareAssets(syms);
+      const bySym = new Map((rows || []).map((r) => [String(r.sym).toUpperCase(), r]));
+      for (const w of state.watchlist) {
+        const r = bySym.get(w.sym);
+        if (r) {
+          w.price = r.price != null ? String(r.price) : w.price;
+          w.change24h = r.change24h != null ? r.change24h : w.change24h;
+          w.sentiment = r.sentiment || w.sentiment;
+          w.risk = r.risk || w.risk;
+          w.name = r.tag || r.name || w.name;
+        }
+      }
+    } catch (_) {}
+  }
+  persistWatchlist();
+}
+
+function wireWatchlistPage() {
+  if (state.route !== "watchlist") return;
+
+  on("#watchlistEmptyCompareBtn", "click", () => go("compare"));
+
+  on("#watchlistAddBtn", "click", async () => {
+    const input = qs("#watchlistAddInput");
+    const errEl = qs("#watchlistAddError");
+    const sym = input?.value?.trim()?.toUpperCase();
+    if (!sym) {
+      if (errEl) errEl.textContent = "Enter a symbol (e.g. BTC, ETH).";
+      return;
+    }
+    if (errEl) errEl.textContent = "";
+    if (!DataAPI?.compareAssets) {
+      if (errEl) errEl.textContent = "Data service unavailable.";
+      return;
+    }
+    try {
+      const { rows } = await DataAPI.compareAssets([sym]);
+      if (!rows?.length) {
+        if (errEl) errEl.textContent = `"${sym}" not found. Try BTC, ETH, SOL.`;
+        return;
+      }
+      addToWatchlist(rows[0]);
+      if (input) input.value = "";
+      if (errEl) errEl.textContent = "";
+      render();
+    } catch (e) {
+      if (errEl) errEl.textContent = e?.message || "Could not add. Try again.";
+    }
+  });
+
+  const grid = qs("#watchlistGrid");
+  if (grid) {
+    grid.addEventListener("click", (e) => {
+      const sym = e.target?.closest?.("[data-watchlist-sym]")?.getAttribute("data-watchlist-sym");
+      if (!sym) return;
+      if (e.target?.closest?.(".watchlistCompareBtn")) {
+        state.selected = [sym];
+        go("compare");
+        return;
+      }
+      if (e.target?.closest?.(".watchlistRemoveBtn")) {
+        removeFromWatchlist(sym);
+        render();
+      }
+    });
+  }
+
+  if (state.watchlist?.length > 0 || state.user?.id) {
+    refreshWatchlistData().then(() => render());
+  }
 }
 
 /* -------------------- Routing -------------------- */
@@ -418,6 +581,7 @@ function render() {
   wireTopNav();
   wireComparePage();
   wireDashboardPage();
+  wireWatchlistPage();
   wirePricingPage();
   wireWaitlistPage();
   wireAccountPage();
@@ -604,6 +768,11 @@ function wireTopNav() {
     go("account");
   });
 
+  on("#acctWatchlistBtn", "click", () => {
+    closeAccountMenu();
+    go("watchlist");
+  });
+
   on("#acctOffersBtn", "click", () => {
     closeAccountMenu();
     go("pricing");
@@ -639,6 +808,20 @@ function closeAccountMenu() {
 
 function wireComparePage() {
   if (state.route !== "compare") return;
+
+  const resultBody = qs("#resultBody");
+  if (resultBody) {
+    resultBody.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".compareWatchBtn:not([disabled])");
+      if (!btn) return;
+      const sym = btn.getAttribute("data-sym");
+      if (!sym) return;
+      const row = state.lastCompareResult?.rows?.find((r) => r.sym === sym);
+      if (!row) return;
+      addToWatchlist(row);
+      render();
+    });
+  }
 
   on("#sponsorSlotBtn", "click", () => {
     nudgeRewardToast("Sponsored comparison slot coming soon.");
@@ -1087,6 +1270,7 @@ function renderResults(result, { animate } = { animate: true }) {
               <th>Risk</th>
               <th>Signal</th>
               <th class="num">Market Cap</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -1100,6 +1284,10 @@ function renderResults(result, { animate } = { animate: true }) {
                 const chCls = ch >= 0 ? "pos" : "neg";
                 const ch7 = Number(r.change7d || 0);
                 const ch7Cls = ch7 >= 0 ? "pos" : "neg";
+                const inWatchlist = (state.watchlist || []).some((w) => w.sym === r.sym);
+                const watchBtn = inWatchlist
+                  ? `<button type="button" class="btnMiniGhost compareWatchBtn" disabled data-sym="${escapeHtml(r.sym)}">✓ Watching</button>`
+                  : `<button type="button" class="btnMiniGhost compareWatchBtn" data-sym="${escapeHtml(r.sym)}">＋ Watch</button>`;
                 return `
                   <tr class="row ${animate ? "rowEnter" : ""}" data-sym="${escapeHtml(r.sym)}" data-kind="asset" style="${animate ? `animation-delay:${idx * 80}ms;` : ""}">
                     <td class="assetCell">
@@ -1114,6 +1302,7 @@ function renderResults(result, { animate } = { animate: true }) {
                     <td><span class="pillRisk ${riskCls}">${escapeHtml(risk)}</span></td>
                     <td>${signalPill(r.prediction24h || trendLabel(r), "asset")}</td>
                     <td class="num">${escapeHtml(r.mcap)}</td>
+                    <td class="watchCell">${watchBtn}</td>
                   </tr>
                 `;
               })
