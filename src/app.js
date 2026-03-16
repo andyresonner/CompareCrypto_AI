@@ -319,7 +319,7 @@ function DashboardPage(state) {
 
             <div class="dashStoryCtas">
               <button class="btnMini" id="dashHowBtn">How to use this in 60s</button>
-              ${state.user ? `<button class="btnMiniGhost" id="dashEmailInsightBtn">Get weekly insight email</button>` : `<button class="btnMiniGhost" id="dashSignupBtn">Create free account</button>`}
+              ${state.user ? `<button class="btnMiniGhost btnWithIcon" id="dashEmailInsightBtn"><span aria-hidden="true">✉</span><span>Get weekly insight email</span></button>` : `<button class="btnMiniGhost" id="dashSignupBtn">Create free account</button>`}
             </div>
           </div>
 
@@ -1018,19 +1018,23 @@ function EmailInsightModal(state) {
             <button class="x" id="closeEmailInsight" aria-label="Close">✕</button>
           </div>
 
-          <img class="emailInsightHeroImage" src="/emailsignup.png" alt="" onerror="this.style.display='none'" />
-
-          <div class="modalEmailInsightForm">
-            <label class="muted small" for="weeklyEmailInput">Email</label>
-            <input class="input" id="weeklyEmailInput" type="email" placeholder="you@domain.com" value="${escapeHtml(prefill)}" />
-            <div class="muted small" id="weeklyEmailStatus" aria-live="polite"></div>
+          <div class="emailInsightHeroWrap">
+            <img class="emailInsightHeroImage" src="/emailsignup.png" alt="" onerror="this.style.display='none'" />
           </div>
 
-          <div class="modalCtas modalEmailInsightCtas">
-            <button class="ctaWide ctaEmailInsight" id="sendInsightEmail">Send me the weekly edge →</button>
-          </div>
+          <div id="emailInsightFormArea">
+            <div class="modalEmailInsightForm">
+              <label class="muted small" for="weeklyEmailInput">Email</label>
+              <input class="input" id="weeklyEmailInput" type="email" placeholder="you@domain.com" value="${escapeHtml(prefill)}" />
+              <div class="muted small" id="weeklyEmailStatus" aria-live="polite"></div>
+            </div>
 
-          <div class="finePrint modalEmailInsightFinePrint">Unsubscribe anytime. We send once a week.</div>
+            <div class="modalCtas modalEmailInsightCtas">
+              <button class="ctaWide ctaEmailInsight" id="sendInsightEmail">Send me the weekly edge →</button>
+            </div>
+
+            <div class="finePrint modalEmailInsightFinePrint">Unsubscribe anytime. We send once a week.</div>
+          </div>
         </div>
       </div>
     `;

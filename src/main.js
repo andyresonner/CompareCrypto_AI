@@ -1883,8 +1883,9 @@ function wireModals() {
   on("#sendInsightEmail", "click", async () => {
     const emailInput = qs("#weeklyEmailInput");
     const status = qs("#weeklyEmailStatus");
+    const formArea = qs("#emailInsightFormArea");
     const email = (emailInput?.value || state.user?.email || "").trim();
-    if (!status) return;
+    if (!status || !formArea) return;
     if (!email || !email.includes("@")) {
       status.textContent = "Enter a valid email.";
       return;
@@ -1896,11 +1897,17 @@ function wireModals() {
       status.textContent = "Couldn’t save your email. Try again.";
       return;
     }
-    status.textContent = "✅ Joined weekly intel.";
+    formArea.innerHTML = `
+      <div class="emailInsightConfirmation">
+        <div class="emailInsightCheckmark" aria-hidden="true">✓</div>
+        <p class="emailInsightConfirmationTitle">You're in.</p>
+        <p class="emailInsightConfirmationSub">Your first brief lands next Monday.</p>
+      </div>
+    `;
     setTimeout(() => {
       closeModal("#emailInsightModal");
-      nudgeRewardToast("You’re in. Weekly intel starts soon.");
-    }, 500);
+      nudgeRewardToast("You're in. Weekly intel starts soon.");
+    }, 2500);
   });
 
   on("#closeIntelModal", "click", () => closeModal("#intelModal"));
