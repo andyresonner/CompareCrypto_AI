@@ -289,6 +289,18 @@ function ensureGlobalListeners() {
     btn.setAttribute("aria-expanded", "false");
   });
 
+  // Close mobile nav menu on outside click
+  document.addEventListener("click", (e) => {
+    const mobileMenu = qs("#navMobileMenu");
+    const hamburger = qs("#navHamburgerBtn");
+    if (!mobileMenu || !hamburger) return;
+    if (!mobileMenu.classList.contains("show")) return;
+    if (mobileMenu.contains(e.target) || hamburger.contains(e.target)) return;
+    mobileMenu.classList.remove("show");
+    hamburger.setAttribute("aria-expanded", "false");
+    hamburger.setAttribute("aria-label", "Open menu");
+  });
+
   // Row click → Community Insights (assets) or Exchange Insight (exchanges)
   document.addEventListener("click", (e) => {
     const lock = e.target?.closest?.("[data-lock='community']");
@@ -558,6 +570,24 @@ function renderEditorialStrip() {
 function wireTopNav() {
   on("#loginBtn", "click", () => openAuthModal("login"));
   on("#getStartedBtn", "click", () => openAuthModal("signup"));
+
+  const hamburger = qs("#navHamburgerBtn");
+  const mobileMenu = qs("#navMobileMenu");
+  if (hamburger && mobileMenu) {
+    hamburger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = mobileMenu.classList.toggle("show");
+      hamburger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      hamburger.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+    });
+    mobileMenu.addEventListener("click", (e) => {
+      if (e.target.matches("a")) {
+        mobileMenu.classList.remove("show");
+        hamburger.setAttribute("aria-expanded", "false");
+        hamburger.setAttribute("aria-label", "Open menu");
+      }
+    });
+  }
 
   const btn = qs("#accountBtn");
   const menu = qs("#accountMenu");

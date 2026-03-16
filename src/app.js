@@ -56,19 +56,21 @@ function TopNav(state) {
       `;
 
   return `
-      <div class="nav">
-        <a href="#compare" class="brand brandLink">
-          <img src="/compareclearlogo.png" alt="CompareCrypto.ai" style="height:36px; width:auto; display:block;" onerror="this.style.display='none'; var t=this.nextElementSibling; if(t) t.style.display='inline';" />
-          <span class="brandText">CompareCrypto.ai</span>
-        </a>
+      <div class="navWrap">
+        <div class="nav">
+          <a href="#compare" class="brand brandLink">
+            <img src="/compareclearlogo.png" alt="CompareCrypto.ai" style="height:36px; width:auto; display:block;" onerror="this.style.display='none'; var t=this.nextElementSibling; if(t) t.style.display='inline';" />
+            <span class="brandText">CompareCrypto.ai</span>
+          </a>
 
-        <div class="links">
-          <a class="${is("compare")}" href="#compare">Compare</a>
-          <a class="${is("dashboard")}" href="#dashboard">Dashboard</a>
-          <a class="${is("pricing")}" href="#pricing">Pricing</a>
-        </div>
+          <div class="links">
+            <a class="${is("compare")}" href="#compare">Compare</a>
+            <a class="${is("dashboard")}" href="#dashboard">Dashboard</a>
+            <a class="${is("pricing")}" href="#pricing">Pricing</a>
+          </div>
 
-        <div class="navRight">
+          <div class="navRight">
+            <button type="button" class="navHamburgerBtn" id="navHamburgerBtn" aria-label="Open menu" aria-expanded="false">☰</button>
           ${trialPill}
           ${
             authed
@@ -113,6 +115,12 @@ function TopNav(state) {
                 <button class="cta" id="getStartedBtn">Get Started</button>
               `
           }
+          </div>
+        </div>
+        <div class="navMobileMenu" id="navMobileMenu" aria-hidden="true">
+          <a class="${is("compare")}" href="#compare">Compare</a>
+          <a class="${is("dashboard")}" href="#dashboard">Dashboard</a>
+          <a class="${is("pricing")}" href="#pricing">Pricing</a>
         </div>
       </div>
     `;
@@ -1599,12 +1607,7 @@ function AuthModal(state) {
             <button class="x" id="closeAuth">✕</button>
           </div>
 
-          <div style="
-            display:grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 12px;
-            padding: 10px 4px 0;
-          ">
+          <div class="authModalGrid">
             <div>
               <div>
                 <div class="bullet" style="margin-top:8px;">
