@@ -45,6 +45,7 @@ const LS = {
   authNudge: "cc_auth_nudge_v1",
   waitlistBackup: "cc_waitlist_backup_v1",
   marketPulseCache: "cc_market_pulse_cache_v1",
+  equityPulseCache: "cc_equity_pulse_v1",
   testCheckoutSubmissions: "cc_test_checkout_submissions",
   trialUntil: "cc_trial_until_v1",
   remindTomorrow: "cc_remind_tomorrow_v1",
@@ -1451,6 +1452,29 @@ async function renderMarketPulse() {
   };
 }
 
+const EQUITY_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function getEquityPulseCache() {
+  try {
+    const raw = sessionStorage.getItem(LS.equityPulseCache);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (Date.now() > (obj.exp || 0)) return null;
+    return obj.val;
+  } catch {
+    return null;
+  }
+}
+
+function setEquityPulseCache(val) {
+  try {
+    sessionStorage.setItem(LS.equityPulseCache, JSON.stringify({
+      exp: Date.now() + EQUITY_CACHE_TTL_MS,
+      val,
+    }));
+  } catch {}
+}
+
 async function fetchMarketPulseRows() {
   const fallback = [
     { key: "btc", name: "BTC", price: "$—", change: null, slug: "btc-outlook-2027" },
@@ -1475,102 +1499,111 @@ async function fetchMarketPulseRows() {
     }
   } catch {}
 
-  // Equities fallback stack
-  let gotEquity = false;
-  try {
-    const y = await fetchYahooQuotes();
-    if (y) {
-      fallback[1] = y.nasdaq;
-      fallback[2] = y.spx;
-      gotEquity = true;
-    }
-  } catch {}
-
-  if (!gotEquity) {
+  // Equities: try sessionStorage cache (5 min), then Yahoo v8 chart, then Stooq CSV
+  const cached = getEquityPulseCache();
+  if (cached?.nasdaq && cached?.spx) {
+    fallback[1] = { ...cached.nasdaq, name: "NASDAQ (cached)" };
+    fallback[2] = { ...cached.spx, name: "S&P 500 (cached)" };
+  } else {
+    let nasdaq = null;
+    let spx = null;
     try {
-      const s = await fetchStooqQuotes();
-      if (s) {
-        fallback[1] = s.nasdaq;
-        fallback[2] = s.spx;
-        gotEquity = true;
+      const y = await fetchYahooQuotes();
+      if (y) {
+        nasdaq = y.nasdaq;
+        spx = y.spx;
       }
     } catch {}
-  }
 
-  if (gotEquity) {
-    saveJSON(LS.marketPulseCache, {
-      ts: Date.now(),
-      nasdaq: fallback[1],
-      spx: fallback[2],
-    });
-  } else {
-    const cached = loadJSON(LS.marketPulseCache, null);
-    if (cached?.nasdaq && cached?.spx) {
-      fallback[1] = { ...cached.nasdaq, name: "NASDAQ (cached)" };
-      fallback[2] = { ...cached.spx, name: "S&P 500 (cached)" };
+    if (!nasdaq || !spx) {
+      try {
+        const s = await fetchStooqQuotes();
+        if (s) {
+          nasdaq = nasdaq || s.nasdaq;
+          spx = spx || s.spx;
+        }
+      } catch {}
     }
+
+    if (nasdaq) fallback[1] = nasdaq;
+    else fallback[1] = { key: "nasdaq", name: "NASDAQ", price: "Unavailable", change: null, slug: "crypto-vs-nasdaq" };
+
+    if (spx) fallback[2] = spx;
+    else fallback[2] = { key: "spx", name: "S&P 500", price: "Unavailable", change: null, slug: "crypto-vs-sp500" };
+
+    if (nasdaq && spx) setEquityPulseCache({ nasdaq: fallback[1], spx: fallback[2] });
   }
 
   return fallback;
 }
 
 async function fetchYahooQuotes() {
-  const res = await fetch("https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5EIXIC,%5EGSPC");
-  if (!res.ok) return null;
-  const data = await res.json();
-  const bySymbol = new Map((data?.quoteResponse?.result || []).map((x) => [x.symbol, x]));
-  const ndx = bySymbol.get("^IXIC");
-  const spx = bySymbol.get("^GSPC");
-  if (!ndx || !spx) return null;
+  const [nasdaqRes, spxRes] = await Promise.all([
+    fetch("https://query1.finance.yahoo.com/v8/finance/chart/%5EIXIC?interval=1d&range=2d"),
+    fetch("https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=2d"),
+  ]);
+  if (!nasdaqRes.ok || !spxRes.ok) return null;
+  const [nasdaqData, spxData] = await Promise.all([nasdaqRes.json(), spxRes.json()]);
+
+  const parseChart = (data) => {
+    const result = data?.chart?.result?.[0];
+    if (!result?.meta) return null;
+    const price = Number(result.meta.regularMarketPrice);
+    const prev = Number(result.meta.chartPreviousClose);
+    if (!Number.isFinite(price)) return null;
+    const change = Number.isFinite(prev) && prev > 0 ? ((price - prev) / prev) * 100 : null;
+    return {
+      price: price.toLocaleString("en-US", { maximumFractionDigits: 2 }),
+      change,
+    };
+  };
+
+  const nasdaqParsed = parseChart(nasdaqData);
+  const spxParsed = parseChart(spxData);
+  if (!nasdaqParsed || !spxParsed) return null;
+
   return {
     nasdaq: {
       key: "nasdaq",
       name: "NASDAQ",
-      price: Number(ndx.regularMarketPrice || 0).toLocaleString("en-US", { maximumFractionDigits: 2 }),
-      change: Number(ndx.regularMarketChangePercent || 0),
+      price: `$${nasdaqParsed.price}`,
+      change: nasdaqParsed.change,
     },
     spx: {
       key: "spx",
       name: "S&P 500",
-      price: Number(spx.regularMarketPrice || 0).toLocaleString("en-US", { maximumFractionDigits: 2 }),
-      change: Number(spx.regularMarketChangePercent || 0),
+      price: `$${spxParsed.price}`,
+      change: spxParsed.change,
     },
   };
 }
 
 async function fetchStooqQuotes() {
-  const res = await fetch("https://stooq.com/q/l/?s=%5Espx,%5Ecomp&f=sd2t2ohlcv&h&e=csv");
-  if (!res.ok) return null;
-  const csv = await res.text();
-  const lines = csv.trim().split("\n");
-  if (lines.length < 3) return null;
-
-  const parsed = {};
-  for (const line of lines.slice(1)) {
-    const cols = line.split(",");
-    const symbol = String(cols[0] || "").toLowerCase();
-    const close = Number(cols[6] || cols[5] || 0);
-    const open = Number(cols[3] || 0);
+  const parseStooqCsv = async (url, key, name) => {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const csv = await res.text();
+    const lines = csv.trim().split("\n");
+    if (lines.length < 2) return null;
+    const cols = lines[1].split(",");
+    const close = Number(cols[6] ?? cols[5] ?? 0);
+    const open = Number(cols[3] ?? 0);
     const ch = open > 0 ? ((close - open) / open) * 100 : null;
-    if (symbol.includes("^comp")) {
-      parsed.nasdaq = {
-        key: "nasdaq",
-        name: "NASDAQ",
-        price: close ? close.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—",
-        change: ch,
-      };
-    }
-    if (symbol.includes("^spx")) {
-      parsed.spx = {
-        key: "spx",
-        name: "S&P 500",
-        price: close ? close.toLocaleString("en-US", { maximumFractionDigits: 2 }) : "—",
-        change: ch,
-      };
-    }
-  }
-  if (!parsed.nasdaq || !parsed.spx) return null;
-  return parsed;
+    if (!Number.isFinite(close)) return null;
+    return {
+      key,
+      name,
+      price: `$${close.toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
+      change: ch,
+    };
+  };
+
+  const [nasdaq, spx] = await Promise.all([
+    parseStooqCsv("https://stooq.com/q/l/?s=^ndx&f=sd2t2ohlcv&h&e=csv", "nasdaq", "NASDAQ"),
+    parseStooqCsv("https://stooq.com/q/l/?s=^spx&f=sd2t2ohlcv&h&e=csv", "spx", "S&P 500"),
+  ]);
+  if (!nasdaq || !spx) return null;
+  return { nasdaq, spx };
 }
 
 async function fetchCommunityPulseRows() {
