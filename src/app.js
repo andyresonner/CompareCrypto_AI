@@ -13,7 +13,7 @@ export function App(state) {
   else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
 
-  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal()}${CheckoutModal(state)}${TrialModal(state)}${TrialSalesModal(state)}`;
+  return `${page}${Footer()}${AuthModal(state)}${IntelUpsellModal(state)}${CommunityPeekModal()}${EmailInsightModal(state)}${CheckoutModal(state)}${TrialModal(state)}${TrialSalesModal(state)}`;
 }
 
 /* ---------- Top Nav ---------- */
@@ -1005,41 +1005,32 @@ function TrialSalesModal(state) {
     `;
 }
 
-function EmailInsightModal() {
+function EmailInsightModal(state) {
+  const prefill = state?.user?.email || "";
   return `
       <div class="modalBackdrop" id="emailInsightModal">
-        <div class="modal big">
-          <div class="modalTop">
-            <div>
-              <div class="modalTitle">Weekly Market Insight</div>
-              <div class="muted">Join our weekly drop of high-signal crypto intel, no fluff.</div>
+        <div class="modal modalEmailInsight big">
+          <div class="modalTop modalEmailInsightTop">
+            <div class="modalEmailInsightHead">
+              <h2 class="modalEmailInsightTitle">Weekly Market Insight</h2>
+              <p class="modalEmailInsightSubline">One high-signal crypto brief, every week. No noise, no spam.</p>
             </div>
-            <button class="x" id="closeEmailInsight">✕</button>
+            <button class="x" id="closeEmailInsight" aria-label="Close">✕</button>
           </div>
 
-          <div class="insList" style="padding-top:8px;">
-            <div class="weeklyHeroImage" aria-hidden="true">
-              <div class="weeklyOverlayText">Want more edge?</div>
-            </div>
+          <img class="emailInsightHeroImage" src="/emailsignup.png" alt="" onerror="this.style.display='none'" />
 
-            <div class="bullet" style="margin-top:10px;">
-              <div class="muted small">Email</div>
-              <input class="input" id="weeklyEmailInput" placeholder="you@domain.com" />
-              <div class="muted small" id="weeklyEmailStatus" style="margin-top:8px;"></div>
-            </div>
-
-            <div class="bullet" style="margin-top:8px;">
-              <div class="muted small">
-                We send one high-signal crypto brief weekly: top opportunities, execution notes, and conviction shifts. No spam.
-              </div>
-            </div>
+          <div class="modalEmailInsightForm">
+            <label class="muted small" for="weeklyEmailInput">Email</label>
+            <input class="input" id="weeklyEmailInput" type="email" placeholder="you@domain.com" value="${escapeHtml(prefill)}" />
+            <div class="muted small" id="weeklyEmailStatus" aria-live="polite"></div>
           </div>
 
-          <div class="modalCtas">
-            <button class="ctaWide" id="sendInsightEmail">Join weekly intel</button>
+          <div class="modalCtas modalEmailInsightCtas">
+            <button class="ctaWide ctaEmailInsight" id="sendInsightEmail">Send me the weekly edge →</button>
           </div>
 
-          <div class="finePrint">By joining, you agree to receive weekly product + market updates. Unsubscribe anytime.</div>
+          <div class="finePrint modalEmailInsightFinePrint">Unsubscribe anytime. We send once a week.</div>
         </div>
       </div>
     `;
