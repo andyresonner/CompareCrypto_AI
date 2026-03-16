@@ -1736,8 +1736,8 @@ async function fetchMarketPulseRows() {
   // Equities: try sessionStorage cache (5 min), then /api/equity proxy, then Stooq fallback
   const cached = getEquityPulseCache();
   if (cached?.nasdaq && cached?.spx) {
-    fallback[1] = { ...cached.nasdaq, name: "NASDAQ (cached)" };
-    fallback[2] = { ...cached.spx, name: "S&P 500 (cached)" };
+    fallback[1] = { ...cached.nasdaq, name: "NASDAQ" };
+    fallback[2] = { ...cached.spx, name: "S&P 500" };
   } else {
     let nasdaq = null;
     let spx = null;
