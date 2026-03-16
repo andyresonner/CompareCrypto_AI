@@ -1691,12 +1691,18 @@ function wireAccountPage() {
     openTrialModal();
   });
 
-  on("#referralUnlockBtn", "click", () => {
-    saveJSON(LS.referralUnlocked, true);
-    state.referralUnlocked = true;
-    confettiMini();
-    nudgeRewardToast("Referral link unlocked 🎉");
-    render();
+  on("#referralRevealBtn", "click", () => {
+    const content = qs("#referralRevealContent");
+    if (!content) return;
+    if (content.classList.contains("expanded")) return;
+    const isFirstTime = !loadJSON(LS.referralUnlocked, false);
+    if (isFirstTime) {
+      saveJSON(LS.referralUnlocked, true);
+      state.referralUnlocked = true;
+      confettiMini();
+      nudgeRewardToast("Referral link unlocked 🎉");
+    }
+    content.classList.add("expanded");
   });
 
   on("#referralCopyBtn", "click", () => {

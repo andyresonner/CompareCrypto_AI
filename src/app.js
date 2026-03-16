@@ -520,7 +520,6 @@ function formatTrialCountdownShort(untilMs) {
 }
 
 function ReferralCard(state) {
-  const unlocked = !!state.referralUnlocked;
   const referralCode = state.referralCode || "------";
   const refCount = state.referralCount ?? 0;
   const baseUrl = "https://comparecrypto.ai";
@@ -529,27 +528,25 @@ function ReferralCard(state) {
   const emailBody = `Hey, I've been using CompareCrypto.ai to compare crypto assets and exchange rates. Use my referral link to get 3 days of Premium free: ${refLink}`;
   const tweetText = encodeURIComponent(`Just found @CompareCryptoAI — the best way to compare crypto assets and exchange rates. Get 3 days Premium free with my link: ${refLink}`);
 
-  if (!unlocked) {
-    return `
-            <div class="plan referralCard referralCardLocked">
-              <div class="referralHeadline">You have a referral reward waiting</div>
-              <div class="referralSubline muted small">Unlock your personal referral link and give friends 3 days Premium free — you get 3 days too for every friend who joins</div>
-              <button type="button" class="cta btnFull referralUnlockBtn" id="referralUnlockBtn">🔓 Unlock My Referral Link</button>
-            </div>`;
-  }
-
   return `
-            <div class="plan referralCard referralCardUnlocked">
+            <div class="plan referralCard">
               <div class="referralHeadline">Refer & Earn — give 3 days, get 3 days</div>
-              <div class="muted small" style="margin-top:6px;">Your referral code</div>
-              <div class="referralCodeBlock" id="referralCodeDisplay">${escapeHtml(referralCode)}</div>
-              <div class="muted small" style="margin-top:10px;">Share your link:</div>
-              <div class="referralShareRow">
-                <button type="button" class="referralShareBtn" id="referralCopyBtn" title="Copy link">📋 Copy link</button>
-                <a href="mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}" class="referralShareBtn referralShareLink" title="Share via email">✉️ Email</a>
-                <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener noreferrer" class="referralShareBtn referralShareLink" title="Share on X">𝕏 Share</a>
+              <div class="referralRevealTeaser">
+                <span class="referralRevealTeaserText">Unlock your referral link</span>
+                <span class="referralRevealChevron" aria-hidden="true">▼</span>
               </div>
-              <div id="referralCountLine" class="referralCountLine muted small">You've referred ${refCount} friend${refCount !== 1 ? "s" : ""} — ${refCount} × 3 days earned</div>
+              <button type="button" class="referralRevealBtn" id="referralRevealBtn">Show my referral link →</button>
+              <div id="referralRevealContent" class="referralRevealContent">
+                <div class="muted small" style="margin-top:14px;">Your referral code</div>
+                <div class="referralCodeBlock" id="referralCodeDisplay">${escapeHtml(referralCode)}</div>
+                <div class="muted small" style="margin-top:10px;">Share your link:</div>
+                <div class="referralShareRow">
+                  <button type="button" class="referralShareBtn" id="referralCopyBtn" title="Copy link">📋 Copy link</button>
+                  <a href="mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}" class="referralShareBtn referralShareLink" title="Share via email">✉️ Email</a>
+                  <a href="https://twitter.com/intent/tweet?text=${tweetText}" target="_blank" rel="noopener noreferrer" class="referralShareBtn referralShareLink" title="Share on X">𝕏 Share</a>
+                </div>
+                <div id="referralCountLine" class="referralCountLine muted small">You've referred ${refCount} friend${refCount !== 1 ? "s" : ""} — ${refCount} × 3 days earned</div>
+              </div>
             </div>`;
 }
 
