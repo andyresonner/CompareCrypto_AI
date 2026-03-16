@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/equity.js": {
+      "maxDuration": 10
+    }
+  }
+}

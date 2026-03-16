@@ -1529,7 +1529,7 @@ async function fetchMarketPulseRows() {
     }
   } catch {}
 
-  // Equities: try sessionStorage cache (5 min), then Yahoo v8 chart, then Stooq CSV
+  // Equities: try sessionStorage cache (5 min), then /api/equity proxy, then Stooq fallback
   const cached = getEquityPulseCache();
   if (cached?.nasdaq && cached?.spx) {
     fallback[1] = { ...cached.nasdaq, name: "NASDAQ (cached)" };
@@ -1538,10 +1538,28 @@ async function fetchMarketPulseRows() {
     let nasdaq = null;
     let spx = null;
     try {
-      const y = await fetchYahooQuotes();
-      if (y) {
-        nasdaq = y.nasdaq;
-        spx = y.spx;
+      const base = typeof location !== "undefined" ? `${location.origin}` : "";
+      const res = await fetch(`${base}/api/equity?symbols=IXIC,GSPC`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.nasdaq && Number.isFinite(data.nasdaq.price)) {
+          nasdaq = {
+            key: "nasdaq",
+            name: "NASDAQ",
+            price: `$${Number(data.nasdaq.price).toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
+            change: Number.isFinite(data.nasdaq.change) ? data.nasdaq.change : null,
+            slug: "crypto-vs-nasdaq",
+          };
+        }
+        if (data?.sp500 && Number.isFinite(data.sp500.price)) {
+          spx = {
+            key: "spx",
+            name: "S&P 500",
+            price: `$${Number(data.sp500.price).toLocaleString("en-US", { maximumFractionDigits: 2 })}`,
+            change: Number.isFinite(data.sp500.change) ? data.sp500.change : null,
+            slug: "crypto-vs-sp500",
+          };
+        }
       }
     } catch {}
 
