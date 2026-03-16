@@ -1617,14 +1617,29 @@ function syncPulseModeButtons() {
 }
 
 async function renderMarketPulse() {
+  if (state.route !== "dashboard") return;
   const host = qs("#marketGrid");
   const note = qs("#marketPulseNote");
   if (!host) return;
   host.innerHTML = `<div class="muted small">Loading market pulse…</div>`;
 
-  const rows = state.pulseMode === "community"
-    ? await fetchCommunityPulseRows()
-    : await fetchMarketPulseRows();
+  let rows;
+  try {
+    rows = state.pulseMode === "community"
+      ? await fetchCommunityPulseRows()
+      : await fetchMarketPulseRows();
+  } catch (_) {
+    rows = [
+      { key: "btc", name: "BTC", price: "$—", change: null, slug: "btc-outlook-2027" },
+      { key: "nasdaq", name: "NASDAQ", price: "—", change: null, slug: "crypto-vs-nasdaq" },
+      { key: "spx", name: "S&P 500", price: "—", change: null, slug: "crypto-vs-sp500" },
+    ];
+  }
+  if (!Array.isArray(rows)) rows = [];
+
+  if (state.route !== "dashboard") return;
+  if (!document.contains(host)) return;
+
   const valid = rows.filter((r) => Number.isFinite(r.change));
   const best = valid.length ? valid.reduce((a, b) => (b.change > a.change ? b : a)) : null;
 
