@@ -58,7 +58,7 @@ function TopNav(state) {
   return `
       <div class="nav">
         <a href="#compare" class="brand brandLink">
-          <img src="/comparelogo.png" alt="CompareCrypto.ai" style="height:36px; width:auto; display:block;" onerror="this.style.display='none'" />
+          <img src="/compareclearlogo.png" alt="CompareCrypto.ai" style="height:36px; width:auto; display:block;" onerror="this.style.display='none'" />
           <span class="brandText">CompareCrypto.ai</span>
         </a>
 
