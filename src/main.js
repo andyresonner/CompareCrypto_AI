@@ -584,6 +584,7 @@ function render() {
   wireWatchlistPage();
   wirePricingPage();
   wireWaitlistPage();
+  wireLearnPage();
   wireAccountPage();
   wireResetPage();
   wireIntelPage();
@@ -1925,6 +1926,72 @@ function wireWaitlistPage() {
       res.where === "supabase+local"
         ? "✅ Added. You’re on the waitlist."
         : "✅ Added locally. We’ll sync this lead when backend table is ready.";
+  });
+}
+
+function wireLearnPage() {
+  if (state.route !== "learn") return;
+
+  // FAQ accordion
+  qsa(".learn-faq-q").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = btn.closest(".learn-faq-item");
+      const answer = item.querySelector(".learn-faq-a");
+      const chevron = item.querySelector(".learn-faq-chevron");
+      const expanded = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", String(!expanded));
+      answer.classList.toggle("open", !expanded);
+      if (chevron) chevron.textContent = expanded ? "▼" : "▲";
+    });
+  });
+
+  // Enroll buttons — open modal with course name
+  qsa(".learn-enroll-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const course = btn.dataset.course || "";
+      const nameInput = qs("#learnEnrollCourseName");
+      const status = qs("#learnEnrollStatus");
+      const emailInput = qs("#learnEnrollEmail");
+      if (nameInput) nameInput.value = course;
+      if (status) status.textContent = "";
+      if (emailInput) emailInput.value = state.user?.email || "";
+      openModal("#learnEnrollModal");
+    });
+  });
+
+  // Close modal
+  on("#closeLearnEnrollModal", "click", () => closeModal("#learnEnrollModal"));
+  qs("#learnEnrollModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeModal("#learnEnrollModal");
+  });
+
+  // Enroll submit — insert into course_waitlist
+  on("#learnEnrollSubmitBtn", "click", async () => {
+    const email = (qs("#learnEnrollEmail")?.value || "").trim();
+    const courseName = (qs("#learnEnrollCourseName")?.value || "").trim();
+    const status = qs("#learnEnrollStatus");
+    if (!status) return;
+
+    if (!email || !email.includes("@")) {
+      status.textContent = "Enter a valid email.";
+      return;
+    }
+
+    status.textContent = "Saving…";
+    try {
+      const { error } = await supabase.from("course_waitlist").insert({ email, course_name: courseName });
+      if (error) throw error;
+      status.textContent = "✅ You're on the list. We'll notify you when enrollment opens.";
+      const submitBtn = qs("#learnEnrollSubmitBtn");
+      if (submitBtn) submitBtn.disabled = true;
+    } catch (_) {
+      status.textContent = "Couldn't save your email. Please try again.";
+    }
+  });
+
+  // Browse Courses button smooth-scrolls to grid
+  on("#learnScrollToCoursesBtn", "click", () => {
+    qs("#learnCourseGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 

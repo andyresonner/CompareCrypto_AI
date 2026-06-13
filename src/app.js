@@ -10,6 +10,7 @@ export function App(state) {
   else if (route === "waitlist") page = WaitlistPage(state);
   else if (route === "account") page = AccountPage(state);
   else if (route === "reset") page = ResetPasswordPage(state);
+  else if (route === "learn") page = LearnPage(state);
   else if (route.startsWith("intel/")) page = IntelArticlePage(state);
   else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
@@ -1827,6 +1828,136 @@ function WatchlistPage(state) {
         </div>
       </div>
     `;
+}
+
+/* ---------- Learn / Courses page ---------- */
+
+function learnCourseCard(num, title, desc, bullets, price) {
+  return `
+    <div class="learn-course-card">
+      <div class="learn-course-num">${num}</div>
+      <div class="learn-course-title">${escapeHtml(title)}</div>
+      <div class="learn-course-desc muted">${escapeHtml(desc)}</div>
+      <ul class="learn-course-bullets">
+        ${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}
+      </ul>
+      <div class="learn-course-price">${escapeHtml(price)}</div>
+      <button class="cta btnFull learn-enroll-btn" data-course="${escapeHtml(title)}">Enroll Now</button>
+    </div>
+  `;
+}
+
+function LearnEnrollModal() {
+  return `
+    <div class="modalBackdrop" id="learnEnrollModal">
+      <div class="modal">
+        <div class="modalTop">
+          <div>
+            <div class="modalTitle">Payment coming soon</div>
+            <div class="muted" style="margin-top:4px;">Drop your email to be notified when enrollment opens.</div>
+          </div>
+          <button class="x" id="closeLearnEnrollModal" aria-label="Close">✕</button>
+        </div>
+        <input type="hidden" id="learnEnrollCourseName" value="" />
+        <div class="searchRow" style="margin-top:16px;">
+          <input class="input" id="learnEnrollEmail" placeholder="you@domain.com" type="email" />
+          <button class="cta" id="learnEnrollSubmitBtn">Notify me</button>
+        </div>
+        <div class="muted small" id="learnEnrollStatus" style="margin-top:12px;min-height:18px;"></div>
+      </div>
+    </div>
+  `;
+}
+
+function LearnPage(state) {
+  return `
+    <div class="bg">
+      ${TopNav(state)}
+      <div class="wrap">
+
+        <div class="learn-hero">
+          <div class="learn-hero-glow" aria-hidden="true"></div>
+          <div class="heroProof">
+            <span class="heroPill learn-gold-pill">4 Courses Available</span>
+            <span class="heroPill learn-gold-pill">Lifetime Access</span>
+          </div>
+          <h1 class="learn-hero-headline">Master Crypto. Build Real Conviction.</h1>
+          <p class="learn-hero-sub">Structured courses for investors who want to understand the market — not just follow it.</p>
+        </div>
+
+        <div id="learnCourseGrid" class="learn-course-grid">
+          ${learnCourseCard("01", "Crypto Fundamentals", "Everything you need to go from zero to confident.", ["How blockchain works", "Bitcoin vs altcoins explained", "How to read a crypto market"], "$49")}
+          ${learnCourseCard("02", "Reading the Market", "Learn to interpret price action without the noise.", ["Candlestick patterns & volume", "Support, resistance & trend lines", "When to buy, hold, or exit"], "$79")}
+          ${learnCourseCard("03", "Portfolio Strategy", "Build a portfolio designed to survive volatility.", ["Allocation frameworks for crypto", "Risk management principles", "Rebalancing and position sizing"], "$79")}
+          ${learnCourseCard("04", "DeFi & Beyond", "Understand the next layer of crypto before everyone else does.", ["How DeFi protocols work", "Yield, liquidity, and risk", "Wallets, bridges, and staying safe"], "$99")}
+        </div>
+
+        <div class="learn-how">
+          <h2 class="learn-section-title">How It Works</h2>
+          <div class="learn-steps">
+            <div class="learn-step">
+              <div class="learn-step-num">01</div>
+              <div class="learn-step-label">Purchase</div>
+              <div class="learn-step-desc muted">Choose your course and complete checkout securely via Stripe.</div>
+            </div>
+            <div class="learn-step">
+              <div class="learn-step-num">02</div>
+              <div class="learn-step-label">Access</div>
+              <div class="learn-step-desc muted">Get instant lifetime access to all course materials.</div>
+            </div>
+            <div class="learn-step">
+              <div class="learn-step-num">03</div>
+              <div class="learn-step-label">Learn</div>
+              <div class="learn-step-desc muted">Work through structured lessons at your own pace.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="learn-instructor">
+          <div class="learn-instructor-avatar">CC</div>
+          <div class="learn-instructor-body">
+            <h2 class="learn-section-title" style="margin-top:0;">Built by a crypto investor, for crypto investors.</h2>
+            <p class="muted" style="margin:10px 0 0; line-height:1.7;">These courses were built from years of navigating real markets — not theory. Every lesson is designed to give you practical frameworks you can apply immediately.</p>
+          </div>
+        </div>
+
+        <div class="learn-faq">
+          <h2 class="learn-section-title">Frequently Asked Questions</h2>
+          <div class="learn-faq-list">
+            <div class="learn-faq-item">
+              <button class="learn-faq-q" aria-expanded="false">
+                <span>Do I get lifetime access?</span>
+                <span class="learn-faq-chevron">▼</span>
+              </button>
+              <div class="learn-faq-a">Yes. Once you purchase a course, you have permanent access including all future updates.</div>
+            </div>
+            <div class="learn-faq-item">
+              <button class="learn-faq-q" aria-expanded="false">
+                <span>What if I'm a complete beginner?</span>
+                <span class="learn-faq-chevron">▼</span>
+              </button>
+              <div class="learn-faq-a">Crypto Fundamentals is built specifically for beginners. No prior knowledge needed.</div>
+            </div>
+            <div class="learn-faq-item">
+              <button class="learn-faq-q" aria-expanded="false">
+                <span>Is there a bundle option?</span>
+                <span class="learn-faq-chevron">▼</span>
+              </button>
+              <div class="learn-faq-a">A full bundle at a discounted rate is coming soon. Drop your email on any course to be notified.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="learn-footer-cta">
+          <h2 class="learn-footer-cta-headline">Ready to invest in your knowledge?</h2>
+          <p class="learn-footer-cta-sub">Join hundreds of investors learning to navigate crypto with confidence.</p>
+          <button class="cta learn-footer-cta-btn" id="learnScrollToCoursesBtn">Browse Courses</button>
+        </div>
+
+      </div>
+    </div>
+    ${LearnEnrollModal()}
+  `;
 }
 
 function escapeHtml(s) {
