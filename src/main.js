@@ -55,10 +55,12 @@ const LS = {
   referralUnlocked: "cc_referral_unlocked_v1",
   billingPlan: "cc_billing_plan_v1",
   watchlist: "cc_watchlist_v1",
+  lang: "cc_lang",
 };
 
 const state = {
   route: "compare",
+  lang: "en",
   mode: "assets",
 
   // selection + results
@@ -339,9 +341,9 @@ async function refreshWatchlistData() {
 }
 
 function wireWatchlistPage() {
-  if (state.route !== "watchlist") return;
+  if (state.route !== "watchlist" && state.route !== "es-watchlist") return;
 
-  on("#watchlistEmptyCompareBtn", "click", () => go("compare"));
+  on("#watchlistEmptyCompareBtn", "click", () => go(langRoute("compare")));
 
   on("#watchlistAddBtn", "click", async () => {
     const input = qs("#watchlistAddInput");
@@ -378,7 +380,7 @@ function wireWatchlistPage() {
       if (!sym) return;
       if (e.target?.closest?.(".watchlistCompareBtn")) {
         state.selected = [sym];
-        go("compare");
+        go(langRoute("compare"));
         return;
       }
       if (e.target?.closest?.(".watchlistRemoveBtn")) {
@@ -398,6 +400,7 @@ function wireWatchlistPage() {
 function parseRoute() {
   const h = (location.hash || "#compare").replace("#", "").trim();
   state.route = h || "compare";
+  state.lang = state.route.startsWith("es-") || state.route === "es" ? "es" : "en";
 }
 
 window.addEventListener("hashchange", () => {
@@ -407,6 +410,10 @@ window.addEventListener("hashchange", () => {
 
 function go(route) {
   location.hash = `#${route}`;
+}
+
+function langRoute(r) {
+  return state.lang === "es" ? `es-${r}` : r;
 }
 
 /* -------------------- Auth -------------------- */
@@ -764,19 +771,26 @@ function wireTopNav() {
     });
   }
 
+  on("#langToggleBtn", "click", (e) => {
+    e.preventDefault();
+    const next = state.lang === "es" ? "en" : "es";
+    localStorage.setItem(LS.lang, next);
+    go(next === "es" ? "es-compare" : "compare");
+  });
+
   on("#acctProfileBtn", "click", () => {
     closeAccountMenu();
-    go("account");
+    go(langRoute("account"));
   });
 
   on("#acctWatchlistBtn", "click", () => {
     closeAccountMenu();
-    go("watchlist");
+    go(langRoute("watchlist"));
   });
 
   on("#acctOffersBtn", "click", () => {
     closeAccountMenu();
-    go("pricing");
+    go(langRoute("pricing"));
   });
 
   on("#acctTrialBtn", "click", () => {
@@ -808,7 +822,7 @@ function closeAccountMenu() {
 /* -------------------- Compare Page -------------------- */
 
 function wireComparePage() {
-  if (state.route !== "compare") return;
+  if (state.route !== "compare" && state.route !== "es-compare") return;
 
   const resultBody = qs("#resultBody");
   if (resultBody) {
@@ -1529,12 +1543,12 @@ function hydrateSavedBlock() {
 /* -------------------- Dashboard Page -------------------- */
 
 function wireDashboardPage() {
-  if (state.route !== "dashboard") return;
+  if (state.route !== "dashboard" && state.route !== "es-dashboard") return;
 
-  on("#dashCompareBtn", "click", () => go("compare"));
+  on("#dashCompareBtn", "click", () => go(langRoute("compare")));
 
   on("#dashHowBtn", "click", () => {
-    go("compare");
+    go(langRoute("compare"));
     setTimeout(() => {
       nudgeRewardToast("Start with a preset, click Compare, then click rows for deeper insight.");
       pulse("#presets");
@@ -1567,7 +1581,7 @@ function wireDashboardPage() {
     render();
   });
 
-  on("#goPremiumBtn", "click", () => go("pricing"));
+  on("#goPremiumBtn", "click", () => go(langRoute("pricing")));
 
   const grid = qs(".dashGrid");
   if (grid) {
@@ -1579,8 +1593,9 @@ function wireDashboardPage() {
       const v = (state.savedViews || []).find((x) => x.id === id);
       if (!v) return;
 
-      location.hash = "#compare";
-      state.route = "compare";
+      const cRoute = langRoute("compare");
+      location.hash = `#${cRoute}`;
+      state.route = cRoute;
       state.mode = v.mode || "assets";
       state.selected = [...(v.items || [])];
       state.compareLoading = false;
@@ -1898,13 +1913,13 @@ async function fetchCommunityPulseRows() {
 /* -------------------- Pricing / Waitlist / Account / Reset -------------------- */
 
 function wirePricingPage() {
-  if (state.route !== "pricing") return;
+  if (state.route !== "pricing" && state.route !== "es-pricing") return;
   on("#checkoutMonthly", "click", () => openCheckoutModal("monthly"));
   on("#checkoutYearly", "click", () => openCheckoutModal("yearly"));
 }
 
 function wireWaitlistPage() {
-  if (state.route !== "waitlist") return;
+  if (state.route !== "waitlist" && state.route !== "es-waitlist") return;
 
   on("#joinWaitlistBtn", "click", async () => {
     const email = (qs("#waitlistEmail")?.value || "").trim();
@@ -1930,7 +1945,7 @@ function wireWaitlistPage() {
 }
 
 function wireLearnPage() {
-  if (state.route !== "learn") return;
+  if (state.route !== "learn" && state.route !== "es-learn") return;
 
   // FAQ accordion
   qsa(".learn-faq-q").forEach((btn) => {
@@ -1996,15 +2011,15 @@ function wireLearnPage() {
 }
 
 function wireAccountPage() {
-  if (state.route !== "account") return;
+  if (state.route !== "account" && state.route !== "es-account") return;
 
-  on("#billingManageBtn", "click", () => go("pricing"));
+  on("#billingManageBtn", "click", () => go(langRoute("pricing")));
   on("#billingUpgradeNowBtn", "click", () => openCheckoutModal("monthly"));
   on("#billingYearlyLink", "click", (e) => {
     e.preventDefault();
     openCheckoutModal("yearly");
   });
-  on("#billingUnlockPremiumBtn", "click", () => go("pricing"));
+  on("#billingUnlockPremiumBtn", "click", () => go(langRoute("pricing")));
   on("#billingTrialLink", "click", (e) => {
     e.preventDefault();
     openTrialModal();
@@ -2162,7 +2177,7 @@ function wireModals() {
   on("#closeLimit", "click", closeLimitModal);
   on("#goPricingFromLimit", "click", () => {
     closeLimitModal();
-    go("pricing");
+    go(langRoute("pricing"));
   });
   on("#applyReferralCodeBtn", "click", () => {
     const code = (qs("#referralCodeInput")?.value || "").trim().toLowerCase();
@@ -2182,7 +2197,7 @@ function wireModals() {
   on("#closeInsights", "click", () => closeModal("#insightsModal"));
   on("#goPricingFromInsights", "click", () => {
     closeModal("#insightsModal");
-    go("pricing");
+    go(langRoute("pricing"));
   });
   on("#createAlert", "click", () => {
     const title = (qs("#insTitle")?.textContent || "this asset").split("—")[0].trim();
@@ -2197,7 +2212,7 @@ function wireModals() {
     const credits = getUserAlertCredits();
     if (credits <= 0) {
       closeModal("#insightsModal");
-      go("pricing");
+      go(langRoute("pricing"));
       nudgeRewardToast("You’ve used your free alerts. Upgrade for unlimited alerts.");
       return;
     }
@@ -2211,7 +2226,7 @@ function wireModals() {
   on("#closeExchange", "click", () => closeModal("#exchangeModal"));
   on("#goPricingFromExchange", "click", () => {
     closeModal("#exchangeModal");
-    go("pricing");
+    go(langRoute("pricing"));
   });
 
   on("#closeEmailInsight", "click", () => closeModal("#emailInsightModal"));
@@ -2248,26 +2263,26 @@ function wireModals() {
   on("#closeIntelModal", "click", () => closeModal("#intelModal"));
   on("#openAuthFromIntel", "click", () => {
     closeModal("#intelModal");
-    if (state.user) go("account");
+    if (state.user) go(langRoute("account"));
     else openAuthModal("signup");
   });
   on("#goPricingFromIntel", "click", () => {
     closeModal("#intelModal");
-    go("pricing");
+    go(langRoute("pricing"));
   });
   on("#closeCommunityPeek", "click", () => closeModal("#communityPeekModal"));
   on("#communityPeekAccount", "click", () => {
     closeModal("#communityPeekModal");
-    if (state.user) go("account");
+    if (state.user) go(langRoute("account"));
     else openAuthModal("signup");
   });
   on("#communityPeekUpgrade", "click", () => {
     closeModal("#communityPeekModal");
-    go("pricing");
+    go(langRoute("pricing"));
   });
   on("#communityPeekInlineUpgrade", "click", () => {
     closeModal("#communityPeekModal");
-    go("pricing");
+    go(langRoute("pricing"));
   });
   on("#communityPeekSend", "click", () => handleCommunityReplySubmit());
   on("#communityPeekInput", "keydown", (e) => {
@@ -2310,7 +2325,7 @@ function wireModals() {
   on("#closeTrialModal", "click", closeTrialModal);
   on("#trialModalCta", "click", () => {
     closeTrialModal();
-    go("compare");
+    go(langRoute("compare"));
   });
 
   on("#trialSalesUpgradeBtn", "click", () => {
@@ -2762,7 +2777,7 @@ function injectTrialNudgeBannerIfNeeded() {
   } else {
     bg.appendChild(banner);
   }
-  on("#trialNudgeUpgrade", "click", () => go("pricing"));
+  on("#trialNudgeUpgrade", "click", () => go(langRoute("pricing")));
 }
 
 function startTrial() {
@@ -3127,6 +3142,16 @@ function escapeHtml(s) {
 /* -------------------- Boot -------------------- */
 
 hydrateFromStorage();
+
+// Language auto-detect: if no cc_lang set and browser is Spanish, default to #es-compare
+(function detectLang() {
+  const saved = localStorage.getItem(LS.lang);
+  if (!saved && navigator.language?.toLowerCase().startsWith("es") && !location.hash) {
+    localStorage.setItem(LS.lang, "es");
+    location.hash = "#es-compare";
+  }
+})();
+
 parseRoute();
 ensureGlobalListeners();
 
