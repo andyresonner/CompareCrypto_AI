@@ -236,6 +236,7 @@ function setUserAlertCredits(n) {
   map[email.toLowerCase()] = Math.max(0, Number(n) || 0);
   saveAlertCreditMap(map);
   state.alertCredits = Math.max(0, Number(n) || 0);
+  saveProfile({ alert_credits: state.alertCredits });
 }
 
 /* -------------------- Watchlist -------------------- */
@@ -423,18 +424,59 @@ async function initAuth() {
     const { data } = await supabase.auth.getSession();
     state.user = data?.session?.user || null;
     state.alertCredits = state.user ? getUserAlertCredits() : 0;
+    if (state.user) await loadProfile(state.user);
   } catch {
     state.user = null;
     state.alertCredits = 0;
   }
 
   try {
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
       state.user = session?.user || null;
       state.alertCredits = state.user ? getUserAlertCredits() : 0;
+      if (state.user) await loadProfile(state.user);
       render();
     });
   } catch {}
+}
+
+async function loadProfile(user) {
+  if (!user?.id) return;
+  try {
+    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    if (!data) return;
+    if (data.billing_plan) {
+      state.billingPlan = data.billing_plan;
+      saveJSON(LS.billingPlan, data.billing_plan);
+    }
+    if (typeof data.trial_until === "number" && data.trial_until > Date.now()) {
+      state.trialUntil = data.trial_until;
+      saveJSON(LS.trialUntil, data.trial_until);
+    }
+    if (typeof data.alert_credits === "number" && user.email) {
+      const map = getAlertCreditMap();
+      map[user.email.toLowerCase()] = data.alert_credits;
+      saveAlertCreditMap(map);
+      state.alertCredits = data.alert_credits;
+    }
+    if (data.referral_code) saveJSON(LS.referralCode, data.referral_code);
+    if (typeof data.referral_count === "number") {
+      saveJSON(LS.referralCount, data.referral_count);
+      state.referralCount = data.referral_count;
+    }
+    if (data.referral_unlocked) {
+      saveJSON(LS.referralUnlocked, true);
+      state.referralUnlocked = true;
+    }
+  } catch {}
+}
+
+function saveProfile(fields) {
+  if (!state.user?.id) return;
+  supabase
+    .from("profiles")
+    .upsert({ id: state.user.id, ...fields, updated_at: new Date().toISOString() }, { onConflict: "id" })
+    .then(() => {});
 }
 
 /* -------------------- Global (one-time) listeners -------------------- */
@@ -2529,6 +2571,7 @@ async function submitAuth() {
       if (error) throw error;
       state.user = data?.user || null;
       state.alertCredits = state.user ? getUserAlertCredits() : 0;
+      if (state.user) saveProfile({ referral_code: getOrCreateReferralCode(), alert_credits: 2 });
       status.textContent = "✅ Account created. You’re in!";
     }
 
@@ -2537,6 +2580,7 @@ async function submitAuth() {
         const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
         state.trialUntil = (state.trialUntil && state.trialUntil > Date.now() ? state.trialUntil : Date.now()) + threeDaysMs;
         saveJSON(LS.trialUntil, state.trialUntil);
+        saveProfile({ trial_until: state.trialUntil });
 
         try {
           await supabase.from("referrals").insert({
@@ -2652,6 +2696,7 @@ async function handleCheckoutPay() {
   saveJSON(LS.trialUntil, state.trialUntil);
   saveJSON(LS.billingPlan, plan);
   state.billingPlan = plan;
+  saveProfile({ billing_plan: plan, trial_until: state.trialUntil });
 
   setTimeout(() => {
     closeCheckoutModal();
@@ -2704,6 +2749,7 @@ function startTrialCountdownInterval() {
 function openTrialModal() {
   state.trialUntil = Date.now() + 3 * 24 * 60 * 60 * 1000;
   saveJSON(LS.trialUntil, state.trialUntil);
+  saveProfile({ trial_until: state.trialUntil });
   render();
   openModal("#trialModal");
   confettiBurst();
@@ -2783,6 +2829,7 @@ function injectTrialNudgeBannerIfNeeded() {
 function startTrial() {
   state.trialUntil = Date.now() + 3 * 24 * 60 * 60 * 1000;
   saveJSON(LS.trialUntil, state.trialUntil);
+  saveProfile({ trial_until: state.trialUntil });
   confettiBurst();
   nudgeRewardToast("🎁 Trial activated: 3 days of Premium.");
   render();
