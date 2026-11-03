@@ -2627,12 +2627,18 @@ async function submitAuth() {
 async function handleCheckoutPay() {
   const name = (qs("#checkoutFullName")?.value || "").trim();
   const email = (qs("#checkoutEmail")?.value || "").trim();
-  const cardNumber = (qs("#checkoutCardNumber")?.value || "").trim();
+  const cardNumber = (qs("#checkoutCardNumber")?.value || "").replace(/\s/g, "").trim();
   const expiry = (qs("#checkoutExpiry")?.value || "").trim();
   const cvv = (qs("#checkoutCvv")?.value || "").trim();
   const zip = (qs("#checkoutZip")?.value || "").trim();
   const plan = state._checkoutPlan || "monthly";
   const timestamp = Date.now();
+
+  const statusEl = qs("#checkoutStatus");
+  if (!email) { if (statusEl) statusEl.textContent = "Please enter your email."; return; }
+  if (cardNumber.length < 13) { if (statusEl) statusEl.textContent = "Please enter a valid card number."; return; }
+  if (!expiry) { if (statusEl) statusEl.textContent = "Please enter your card expiry."; return; }
+  if (!cvv) { if (statusEl) statusEl.textContent = "Please enter your CVV."; return; }
 
   const payload = {
     name,

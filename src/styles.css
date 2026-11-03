@@ -3575,9 +3575,26 @@ button {
   .checkoutRow {
     flex-direction: column;
   }
+  .modalBackdrop {
+    padding: 12px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
   .modal {
     overflow-y: auto;
-    max-height: 90vh;
+    max-height: none;
+    padding: 16px;
+    margin: auto;
+    width: 100%;
+  }
+  .trialCountdown {
+    font-size: 20px;
+  }
+  .trialModalHeadline {
+    font-size: 18px;
+  }
+  .checkoutForm .checkoutCardNumber {
+    font-size: 16px;
   }
   .links a,
   .navMobileMenu a,

@@ -920,7 +920,8 @@ function CheckoutModal(state) {
                 <input class="input checkoutInput" id="checkoutZip" type="text" placeholder="10001" />
               </div>
 
-              <div class="modalCtas" style="margin-top:16px;">
+              <div id="checkoutStatus" class="muted small" style="margin-top:10px;min-height:18px;"></div>
+              <div class="modalCtas" style="margin-top:10px;">
                 <button class="ctaWide" id="checkoutPayBtn">Pay Now</button>
               </div>
             </div>
@@ -2998,7 +2999,8 @@ function EsCheckoutModal(state) {
               <div class="muted small">Código postal</div>
               <input class="input checkoutInput" id="checkoutZip" type="text" placeholder="10001" />
             </div>
-            <div class="modalCtas" style="margin-top:16px;">
+            <div id="checkoutStatus" class="muted small" style="margin-top:10px;min-height:18px;"></div>
+            <div class="modalCtas" style="margin-top:10px;">
               <button class="ctaWide" id="checkoutPayBtn">Pagar ahora</button>
             </div>
           </div>
