@@ -2318,11 +2318,7 @@ async function wireAdminPage() {
       if (err) err.textContent = "Incorrect password.";
       return;
     }
-    const envKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || "";
-    if (!envKey || envKey.length < 20) {
-      if (err) err.textContent = "Service key not configured. Add VITE_SUPABASE_SERVICE_KEY to Vercel env vars.";
-      return;
-    }
+    const envKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1veGJqeG54ZGFpbnFtbHFqcmliIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDE1NTIxNiwiZXhwIjoyMDg1NzMxMjE2fQ.lNvRxxd1U25HR3HzeJhsdn9RcLNYQ1sGLQ591IDgrps";
     sessionStorage.setItem("cc_admin_svc_key", envKey);
     state._admin.authed = true;
     state._admin.tab = "users";
