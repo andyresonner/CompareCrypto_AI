@@ -3243,18 +3243,29 @@ export function AdminPage(state) {
 
   if (!admin.authed) {
     return `
-      <div class="adminWrap">
-        <div class="adminLoginScreen">
-          <div class="adminLoginCard">
-            <div class="adminLoginLogo">Compare<span>Crypto</span>.ai</div>
-            <div class="adminLoginSubtitle">Admin access only</div>
-            <label for="adminPassInput">Password</label>
-            <input type="password" id="adminPassInput" placeholder="Enter admin password" autocomplete="current-password" />
-            <label for="adminKeyInput">Supabase Service Role Key</label>
-            <input type="password" id="adminKeyInput" placeholder="eyJhbGci…" autocomplete="off" />
-            <div class="adminLoginErr" id="adminLoginErr"></div>
-            <button class="adminLoginBtn" id="adminLoginBtn">Sign in to Admin</button>
+      ${TopNav(state)}
+      <div class="pageWrap" style="max-width:420px;margin:80px auto;padding:0 20px;">
+        <div class="dashCard" style="padding:32px;">
+          <div style="font-size:18px;font-weight:700;margin-bottom:4px;">Admin Access</div>
+          <div class="muted small" style="margin-bottom:24px;">CompareCrypto internal dashboard</div>
+
+          <div style="margin-bottom:14px;">
+            <div class="muted small" style="margin-bottom:6px;font-weight:600;">Password</div>
+            <input type="password" id="adminPassInput" placeholder="Enter password"
+              style="width:100%;background:var(--bg2,#1a1d24);border:1px solid var(--border,#2a2d35);border-radius:8px;padding:10px 12px;font-size:14px;color:inherit;box-sizing:border-box;outline:none;" />
           </div>
+
+          <div style="margin-bottom:6px;">
+            <div class="muted small" style="margin-bottom:4px;font-weight:600;">Supabase Secret Key</div>
+            <div class="muted" style="font-size:11px;margin-bottom:6px;">
+              Go to Supabase → Project Settings → API Keys → click <b>View legacy API keys</b> → copy <b>service_role</b> (starts with eyJ…)
+            </div>
+            <input type="password" id="adminKeyInput" placeholder="eyJhbGci…"
+              style="width:100%;background:var(--bg2,#1a1d24);border:1px solid var(--border,#2a2d35);border-radius:8px;padding:10px 12px;font-size:14px;color:inherit;box-sizing:border-box;outline:none;" />
+          </div>
+
+          <div style="color:#f06a6a;font-size:13px;min-height:18px;margin:10px 0 14px;" id="adminLoginErr"></div>
+          <button class="cta" id="adminLoginBtn" style="width:100%;">Sign in</button>
         </div>
       </div>
     `;
@@ -3263,25 +3274,25 @@ export function AdminPage(state) {
   const tab = admin.tab || "users";
 
   return `
-    <div class="adminWrap">
-      <div class="adminShell">
-        <div class="adminTopBar">
-          <div class="adminBrand">Compare<span>Crypto</span>.ai <span class="adminBadge">Admin</span></div>
-          <div class="adminTopRight">
-            <button class="adminLogoutBtn" id="adminLogoutBtn">Sign out</button>
-          </div>
+    ${TopNav(state)}
+    <div class="pageWrap" style="padding-top:24px;padding-bottom:60px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:20px;font-weight:700;">Admin Dashboard</div>
+          <div class="muted small">Internal view — not visible to users</div>
         </div>
+        <button class="ghostBtn" id="adminLogoutBtn" style="font-size:13px;">Sign out</button>
+      </div>
 
-        <div class="adminTabs">
-          <button class="adminTab ${tab === "users" ? "active" : ""}" data-tab="users">Users</button>
-          <button class="adminTab ${tab === "submissions" ? "active" : ""}" data-tab="submissions">Submissions</button>
-          <button class="adminTab ${tab === "waitlist" ? "active" : ""}" data-tab="waitlist">Waitlist</button>
-          <button class="adminTab ${tab === "blog" ? "active" : ""}" data-tab="blog">Blog Posts</button>
-        </div>
+      <div class="navTabs" style="margin-bottom:20px;">
+        <button class="navTab ${tab === "users" ? "active" : ""}" data-tab="users">Users</button>
+        <button class="navTab ${tab === "submissions" ? "active" : ""}" data-tab="submissions">Submissions</button>
+        <button class="navTab ${tab === "waitlist" ? "active" : ""}" data-tab="waitlist">Waitlist</button>
+        <button class="navTab ${tab === "blog" ? "active" : ""}" data-tab="blog">Blog Posts</button>
+      </div>
 
-        <div class="adminContent" id="adminContent">
-          ${AdminTabContent(admin)}
-        </div>
+      <div id="adminContent">
+        ${AdminTabContent(admin)}
       </div>
     </div>
   `;
@@ -3292,36 +3303,42 @@ function AdminTabContent(admin) {
 
   if (tab === "users") {
     const rows = admin.users || null;
-    if (rows === null) return `<div class="adminLoading" id="adminDataArea">Loading users…</div>`;
-    if (rows.error) return `<div class="adminError">Error: ${escapeHtml(rows.error)}</div>`;
+    if (rows === null) return `<div class="muted" style="padding:40px 0;text-align:center;">Loading users…</div>`;
+    if (rows.error) return `
+      <div class="dashCard" style="border-color:#f06a6a33;padding:20px;">
+        <div style="color:#f06a6a;font-weight:600;margin-bottom:6px;">Could not load users</div>
+        <div class="muted small" style="margin-bottom:12px;">${escapeHtml(rows.error)}</div>
+        <div class="muted small">Make sure you used the <b>legacy service_role JWT</b> (starts with eyJ…), not the new sb_secret key.<br>
+        Go to Supabase → Project Settings → API Keys → <b>View legacy API keys</b>.</div>
+      </div>`;
     return `
-      <div class="adminPanelTitle">Users</div>
-      <div class="adminPanelSubtitle">${rows.length} account${rows.length !== 1 ? "s" : ""}</div>
-      <div class="adminTableWrap">
-        <table class="adminTable">
-          <thead><tr>
-            <th>#</th><th>Email</th><th>Signed up</th><th>Plan</th><th>Trial</th><th>Credits</th>
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px;">Users <span class="muted" style="font-size:13px;font-weight:400;">${rows.length} account${rows.length !== 1 ? "s" : ""}</span></div>
+      <div class="dashCard" style="padding:0;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--border,#2a2d35);">
+            <th style="padding:10px 14px;text-align:left;color:var(--muted,#8892a4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">#</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--muted,#8892a4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Email</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--muted,#8892a4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Joined</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--muted,#8892a4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Plan</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--muted,#8892a4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Trial</th>
+            <th style="padding:10px 14px;text-align:left;color:var(--muted,#8892a4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Credits</th>
           </tr></thead>
           <tbody>
             ${rows.length === 0
-              ? `<tr class="adminEmptyRow"><td colspan="6">No users yet</td></tr>`
+              ? `<tr><td colspan="6" style="padding:32px;text-align:center;color:var(--muted);">No users yet</td></tr>`
               : rows.map((u, i) => {
                   const plan = u.billing_plan || "free";
-                  const planCls = plan === "free" ? "free" : plan.startsWith("trial") ? "trial" : "";
                   const trial = u.trial_until && u.trial_until > Date.now()
                     ? `${Math.max(1, Math.ceil((u.trial_until - Date.now()) / 86400000))}d left`
                     : "—";
-                  const credits = u.alert_credits ?? "—";
-                  const signedUp = u.created_at
-                    ? new Date(u.created_at).toLocaleDateString()
-                    : "—";
-                  return `<tr>
-                    <td class="muted">${i + 1}</td>
-                    <td>${escapeHtml(u.email || "—")}</td>
-                    <td>${escapeHtml(signedUp)}</td>
-                    <td><span class="adminBadgePlan ${planCls}">${escapeHtml(plan)}</span></td>
-                    <td>${escapeHtml(trial)}</td>
-                    <td>${escapeHtml(String(credits))}</td>
+                  const signedUp = u.created_at ? new Date(u.created_at).toLocaleDateString() : "—";
+                  return `<tr style="border-bottom:1px solid var(--border,#2a2d35);">
+                    <td style="padding:10px 14px;color:var(--muted);">${i + 1}</td>
+                    <td style="padding:10px 14px;">${escapeHtml(u.email || "—")}</td>
+                    <td style="padding:10px 14px;color:var(--muted);">${escapeHtml(signedUp)}</td>
+                    <td style="padding:10px 14px;"><span class="sig ${plan === "free" ? "" : "good"}">${escapeHtml(plan)}</span></td>
+                    <td style="padding:10px 14px;color:var(--muted);">${escapeHtml(trial)}</td>
+                    <td style="padding:10px 14px;color:var(--muted);">${escapeHtml(String(u.alert_credits ?? "—"))}</td>
                   </tr>`;
                 }).join("")
             }
@@ -3333,31 +3350,31 @@ function AdminTabContent(admin) {
 
   if (tab === "submissions") {
     const rows = admin.submissions || null;
-    if (rows === null) return `<div class="adminLoading" id="adminDataArea">Loading submissions…</div>`;
-    if (rows.error) return `<div class="adminError">Error: ${escapeHtml(rows.error)}</div>`;
+    if (rows === null) return `<div class="muted" style="padding:40px 0;text-align:center;">Loading submissions…</div>`;
+    if (rows.error) return `<div class="dashCard" style="border-color:#f06a6a33;padding:20px;color:#f06a6a;">${escapeHtml(rows.error)}</div>`;
     return `
-      <div class="adminPanelTitle">Checkout Submissions</div>
-      <div class="adminPanelSubtitle">${rows.length} submission${rows.length !== 1 ? "s" : ""}</div>
-      <div class="adminTableWrap">
-        <table class="adminTable">
-          <thead><tr>
-            <th>#</th><th>Name</th><th>Email</th><th>Card (last 4)</th><th>Expiry</th><th>Plan</th><th>Date</th>
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px;">Checkout Submissions <span class="muted" style="font-size:13px;font-weight:400;">${rows.length}</span></div>
+      <div class="dashCard" style="padding:0;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--border,#2a2d35);">
+            ${["#","Name","Email","Card","Expiry","Plan","Date"].map(h =>
+              `<th style="padding:10px 14px;text-align:left;color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">${h}</th>`
+            ).join("")}
           </tr></thead>
           <tbody>
             ${rows.length === 0
-              ? `<tr class="adminEmptyRow"><td colspan="7">No submissions yet</td></tr>`
+              ? `<tr><td colspan="7" style="padding:32px;text-align:center;color:var(--muted);">No submissions yet</td></tr>`
               : rows.map((r, i) => {
                   const card = String(r.card_number || "");
-                  const last4 = card.length >= 4 ? "•••• " + card.slice(-4) : "—";
-                  const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : "—";
-                  return `<tr>
-                    <td class="muted">${i + 1}</td>
-                    <td>${escapeHtml(r.name || "—")}</td>
-                    <td>${escapeHtml(r.email || "—")}</td>
-                    <td>${escapeHtml(last4)}</td>
-                    <td>${escapeHtml(r.expiry || "—")}</td>
-                    <td>${escapeHtml(r.plan || "—")}</td>
-                    <td>${escapeHtml(date)}</td>
+                  const last4 = card.replace(/\s/g,"").length >= 4 ? "•••• " + card.replace(/\s/g,"").slice(-4) : "—";
+                  return `<tr style="border-bottom:1px solid var(--border,#2a2d35);">
+                    <td style="padding:10px 14px;color:var(--muted);">${i + 1}</td>
+                    <td style="padding:10px 14px;">${escapeHtml(r.name || "—")}</td>
+                    <td style="padding:10px 14px;">${escapeHtml(r.email || "—")}</td>
+                    <td style="padding:10px 14px;font-family:monospace;">${escapeHtml(last4)}</td>
+                    <td style="padding:10px 14px;color:var(--muted);">${escapeHtml(r.expiry || "—")}</td>
+                    <td style="padding:10px 14px;"><span class="sig">${escapeHtml(r.plan || "—")}</span></td>
+                    <td style="padding:10px 14px;color:var(--muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}</td>
                   </tr>`;
                 }).join("")
             }
@@ -3370,40 +3387,45 @@ function AdminTabContent(admin) {
   if (tab === "waitlist") {
     const emails = admin.waitlist || null;
     const courses = admin.courseWaitlist || null;
-    if (emails === null) return `<div class="adminLoading" id="adminDataArea">Loading waitlist…</div>`;
-    if (emails.error) return `<div class="adminError">Error: ${escapeHtml(emails.error)}</div>`;
+    if (emails === null) return `<div class="muted" style="padding:40px 0;text-align:center;">Loading waitlist…</div>`;
+    if (emails.error) return `<div class="dashCard" style="border-color:#f06a6a33;padding:20px;color:#f06a6a;">${escapeHtml(emails.error)}</div>`;
+    const tableStyle = "width:100%;border-collapse:collapse;font-size:13px;";
+    const thStyle = "padding:10px 14px;text-align:left;color:var(--muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;";
+    const tdStyle = "padding:10px 14px;border-bottom:1px solid var(--border,#2a2d35);";
     return `
-      <div class="adminPanelTitle">Waitlist</div>
-      <div class="adminPanelSubtitle">${(emails.length || 0) + (courses?.length || 0)} total entries</div>
-      <div class="adminPanelSubtitle" style="margin-bottom:10px;">Pricing waitlist (${emails.length})</div>
-      <div class="adminTableWrap" style="margin-bottom:24px;">
-        <table class="adminTable">
-          <thead><tr><th>#</th><th>Email</th><th>Source</th><th>Date</th></tr></thead>
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px;">Pricing Waitlist <span class="muted" style="font-size:13px;font-weight:400;">${emails.length}</span></div>
+      <div class="dashCard" style="padding:0;overflow:hidden;margin-bottom:24px;">
+        <table style="${tableStyle}">
+          <thead><tr style="border-bottom:1px solid var(--border,#2a2d35);">
+            <th style="${thStyle}">#</th><th style="${thStyle}">Email</th><th style="${thStyle}">Source</th><th style="${thStyle}">Date</th>
+          </tr></thead>
           <tbody>
             ${emails.length === 0
-              ? `<tr class="adminEmptyRow"><td colspan="4">No entries yet</td></tr>`
+              ? `<tr><td colspan="4" style="padding:32px;text-align:center;color:var(--muted);">No entries yet</td></tr>`
               : emails.map((r, i) => `<tr>
-                  <td class="muted">${i + 1}</td>
-                  <td>${escapeHtml(r.email || "—")}</td>
-                  <td>${escapeHtml(r.source || "—")}</td>
-                  <td>${r.created_at ? escapeHtml(new Date(r.created_at).toLocaleDateString()) : "—"}</td>
+                  <td style="${tdStyle}color:var(--muted);">${i + 1}</td>
+                  <td style="${tdStyle}">${escapeHtml(r.email || "—")}</td>
+                  <td style="${tdStyle}color:var(--muted);">${escapeHtml(r.source || "—")}</td>
+                  <td style="${tdStyle}color:var(--muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}</td>
                 </tr>`).join("")
             }
           </tbody>
         </table>
       </div>
-      <div class="adminPanelSubtitle" style="margin-bottom:10px;">Course waitlist (${courses?.length || 0})</div>
-      <div class="adminTableWrap">
-        <table class="adminTable">
-          <thead><tr><th>#</th><th>Email</th><th>Course</th><th>Date</th></tr></thead>
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px;">Course Waitlist <span class="muted" style="font-size:13px;font-weight:400;">${courses?.length || 0}</span></div>
+      <div class="dashCard" style="padding:0;overflow:hidden;">
+        <table style="${tableStyle}">
+          <thead><tr style="border-bottom:1px solid var(--border,#2a2d35);">
+            <th style="${thStyle}">#</th><th style="${thStyle}">Email</th><th style="${thStyle}">Course</th><th style="${thStyle}">Date</th>
+          </tr></thead>
           <tbody>
             ${!courses || courses.length === 0
-              ? `<tr class="adminEmptyRow"><td colspan="4">No entries yet</td></tr>`
+              ? `<tr><td colspan="4" style="padding:32px;text-align:center;color:var(--muted);">No entries yet</td></tr>`
               : courses.map((r, i) => `<tr>
-                  <td class="muted">${i + 1}</td>
-                  <td>${escapeHtml(r.email || "—")}</td>
-                  <td>${escapeHtml(r.course || "—")}</td>
-                  <td>${r.created_at ? escapeHtml(new Date(r.created_at).toLocaleDateString()) : "—"}</td>
+                  <td style="${tdStyle}color:var(--muted);">${i + 1}</td>
+                  <td style="${tdStyle}">${escapeHtml(r.email || "—")}</td>
+                  <td style="${tdStyle}color:var(--muted);">${escapeHtml(r.course || "—")}</td>
+                  <td style="${tdStyle}color:var(--muted);">${r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}</td>
                 </tr>`).join("")
             }
           </tbody>
@@ -3414,88 +3436,93 @@ function AdminTabContent(admin) {
 
   if (tab === "blog") {
     const posts = admin.blogPosts || null;
-    if (posts === null) return `<div class="adminLoading" id="adminDataArea">Loading blog posts…</div>`;
-    if (posts.error) return `<div class="adminError">Error: ${escapeHtml(posts.error)}</div>`;
+    if (posts === null) return `<div class="muted" style="padding:40px 0;text-align:center;">Loading blog posts…</div>`;
+    if (posts.error) return `<div class="dashCard" style="border-color:#f06a6a33;padding:20px;color:#f06a6a;">${escapeHtml(posts.error)}</div>`;
     const editing = admin.editingPost || null;
+    if (editing) return AdminBlogEditor(editing);
     return `
-      ${editing
-        ? AdminBlogEditor(editing)
-        : `
-          <div class="adminPanelTitle">Blog Posts</div>
-          <div class="adminPanelSubtitle">Intel articles displayed on the site. Manage from here without code deploys.</div>
-          <button class="adminNewPostBtn" id="adminNewPostBtn">+ New Post</button>
-          <div class="adminBlogGrid" id="adminBlogGrid">
-            ${posts.length === 0
-              ? `<div class="adminLoading">No posts yet.</div>`
-              : posts.map(p => `
-                <div class="adminBlogCard" data-post-id="${p.id}">
-                  <div class="adminPublishedDot ${p.published ? "" : "unpublished"}"></div>
-                  <div class="adminBlogMeta">
-                    <div class="adminBlogTitle">${escapeHtml(p.title)}</div>
-                    <div class="adminBlogSlug">${escapeHtml(p.slug)}</div>
-                  </div>
-                  <div class="adminBlogActions">
-                    <button class="adminBtnSm" data-action="edit-post" data-id="${p.id}">Edit</button>
-                    <button class="adminBtnSm" data-action="toggle-post" data-id="${p.id}" data-pub="${p.published}">${p.published ? "Unpublish" : "Publish"}</button>
-                    <button class="adminBtnSm danger" data-action="delete-post" data-id="${p.id}">Delete</button>
-                  </div>
-                </div>
-              `).join("")
-            }
-          </div>
-        `
-      }
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:16px;font-weight:700;">Blog Posts <span class="muted" style="font-size:13px;font-weight:400;">${posts.length}</span></div>
+        <button class="cta" id="adminNewPostBtn" style="font-size:13px;padding:8px 16px;">+ New Post</button>
+      </div>
+      <div style="display:grid;gap:10px;" id="adminBlogGrid">
+        ${posts.length === 0
+          ? `<div class="muted" style="padding:32px;text-align:center;">No posts yet.</div>`
+          : posts.map(p => `
+            <div class="dashCard" style="display:flex;align-items:center;gap:14px;padding:14px 18px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:${p.published ? "#4fc38a" : "#555"};flex-shrink:0;"></div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.title)}</div>
+                <div class="muted small" style="font-family:monospace;">${escapeHtml(p.slug)}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-shrink:0;">
+                <button class="ghostBtn" style="font-size:12px;padding:5px 11px;" data-action="edit-post" data-id="${p.id}">Edit</button>
+                <button class="ghostBtn" style="font-size:12px;padding:5px 11px;" data-action="toggle-post" data-id="${p.id}" data-pub="${p.published}">${p.published ? "Unpublish" : "Publish"}</button>
+                <button class="ghostBtn" style="font-size:12px;padding:5px 11px;color:#f06a6a;" data-action="delete-post" data-id="${p.id}">Delete</button>
+              </div>
+            </div>
+          `).join("")
+        }
+      </div>
     `;
   }
 
-  return `<div class="adminLoading">Select a tab above.</div>`;
+  return "";
 }
 
 function AdminBlogEditor(post) {
   const isNew = !post.id;
   const sections = Array.isArray(post.sections) ? JSON.stringify(post.sections, null, 2) : (post.sections || "[]");
   const stats    = Array.isArray(post.stats)    ? JSON.stringify(post.stats, null, 2)    : (post.stats    || "[]");
+  const inp = `background:var(--bg2,#1a1d24);border:1px solid var(--border,#2a2d35);border-radius:8px;padding:9px 12px;font-size:13px;color:inherit;width:100%;box-sizing:border-box;outline:none;font-family:inherit;`;
+  const lbl = `display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;`;
   return `
-    <div class="adminBlogForm">
-      <h3>${isNew ? "New Post" : "Edit Post"}</h3>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <button class="ghostBtn" id="adminCancelPostBtn" style="font-size:13px;">← Back</button>
+      <div style="font-size:16px;font-weight:700;">${isNew ? "New Post" : "Edit Post"}</div>
+    </div>
+    <div class="dashCard" style="padding:24px;">
       <input type="hidden" id="adminBlogId" value="${isNew ? "" : escapeHtml(String(post.id))}">
-      <div class="adminFormRow">
-        <label>Title</label>
-        <input type="text" id="adminBlogTitle" value="${escapeHtml(post.title || "")}" placeholder="Article title">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="${lbl}">Title</label>
+          <input type="text" id="adminBlogTitle" value="${escapeHtml(post.title || "")}" placeholder="Article title" style="${inp}">
+        </div>
+        <div>
+          <label style="${lbl}">Slug</label>
+          <input type="text" id="adminBlogSlug" value="${escapeHtml(post.slug || "")}" placeholder="how-to-research-altcoins" style="${inp}">
+        </div>
+        <div>
+          <label style="${lbl}">Deck (subtitle)</label>
+          <input type="text" id="adminBlogDeck" value="${escapeHtml(post.deck || "")}" placeholder="One-sentence summary" style="${inp}">
+        </div>
+        <div>
+          <label style="${lbl}">Sponsor</label>
+          <input type="text" id="adminBlogSponsor" value="${escapeHtml(post.sponsor || "")}" placeholder="Sponsored by…" style="${inp}">
+        </div>
       </div>
-      <div class="adminFormRow">
-        <label>Slug (URL-safe, unique)</label>
-        <input type="text" id="adminBlogSlug" value="${escapeHtml(post.slug || "")}" placeholder="how-to-research-altcoins">
+      <div style="margin-bottom:14px;">
+        <label style="${lbl}">Hero image path</label>
+        <input type="text" id="adminBlogHero" value="${escapeHtml(post.hero_image || "")}" placeholder="/intel/cards/my-article.png" style="${inp}">
       </div>
-      <div class="adminFormRow">
-        <label>Deck (subtitle)</label>
-        <input type="text" id="adminBlogDeck" value="${escapeHtml(post.deck || "")}" placeholder="One-sentence summary">
+      <div style="margin-bottom:14px;">
+        <label style="${lbl}">Stats JSON — array of {"k":"Label","v":"Value"}</label>
+        <textarea id="adminBlogStats" style="${inp}min-height:72px;resize:vertical;">${escapeHtml(stats)}</textarea>
       </div>
-      <div class="adminFormRow">
-        <label>Sponsor</label>
-        <input type="text" id="adminBlogSponsor" value="${escapeHtml(post.sponsor || "")}" placeholder="Sponsored by…">
+      <div style="margin-bottom:14px;">
+        <label style="${lbl}">Sections JSON — array of {h, p, bullets[], takeaway, img}</label>
+        <textarea id="adminBlogSections" style="${inp}min-height:160px;resize:vertical;">${escapeHtml(sections)}</textarea>
       </div>
-      <div class="adminFormRow">
-        <label>Hero image path</label>
-        <input type="text" id="adminBlogHero" value="${escapeHtml(post.hero_image || "")}" placeholder="/intel/cards/my-article.png">
-      </div>
-      <div class="adminFormRow">
-        <label>Stats JSON (array of {k,v})</label>
-        <textarea id="adminBlogStats">${escapeHtml(stats)}</textarea>
-      </div>
-      <div class="adminFormRow">
-        <label>Sections JSON (array of {h, p, bullets[], takeaway, img})</label>
-        <textarea id="adminBlogSections" style="min-height:160px;">${escapeHtml(sections)}</textarea>
-      </div>
-      <div class="adminFormRow">
-        <label>
-          <input type="checkbox" id="adminBlogPublished" ${post.published !== false ? "checked" : ""}> Published
+      <div style="margin-bottom:16px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="adminBlogPublished" ${post.published !== false ? "checked" : ""}>
+          <span style="font-size:14px;">Published (visible on site)</span>
         </label>
       </div>
-      <div class="adminLoginErr" id="adminBlogErr"></div>
-      <div class="adminFormActions">
-        <button class="adminSaveBtn" id="adminSavePostBtn">${isNew ? "Create Post" : "Save Changes"}</button>
-        <button class="adminCancelBtn" id="adminCancelPostBtn">Cancel</button>
+      <div style="color:#f06a6a;font-size:13px;min-height:18px;margin-bottom:12px;" id="adminBlogErr"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="cta" id="adminSavePostBtn">${isNew ? "Create Post" : "Save Changes"}</button>
+        <button class="ghostBtn" id="adminCancelPostBtn">Cancel</button>
       </div>
     </div>
   `;

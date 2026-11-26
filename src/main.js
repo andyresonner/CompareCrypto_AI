@@ -2216,7 +2216,7 @@ function wireIntelPage() {
 
 /* -------------------- Admin -------------------- */
 
-const ADMIN_PASS = "ccadmin2025";
+const ADMIN_PASS = "admin";
 
 function ensureAdmin() {
   if (!state._admin) state._admin = { authed: false, tab: "users" };
@@ -2347,7 +2347,7 @@ async function wireAdminPage() {
   });
 
   // Tab switching
-  qsa(".adminTab").forEach(btn => {
+  qsa(".navTab[data-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
       const tab = btn.dataset.tab;
       if (tab) adminLoadTab(tab);
