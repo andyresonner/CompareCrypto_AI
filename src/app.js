@@ -20,6 +20,7 @@ export function App(state) {
   else if (route === "es-watchlist") page = EsWatchlistPage(state);
   else if (route === "es-account") page = EsAccountPage(state);
   else if (route === "es-learn") page = EsLearnPage(state);
+  else if (route === "admin") return AdminPage(state);
   else if (route.startsWith("intel/")) page = IntelArticlePage(state);
   else if (route.startsWith("markets/")) page = MarketsArticlePage(state);
   else page = ComparePage(state);
@@ -3233,4 +3234,269 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+/* ===== Admin Portal ===== */
+
+export function AdminPage(state) {
+  const admin = state._admin || {};
+
+  if (!admin.authed) {
+    return `
+      <div class="adminWrap">
+        <div class="adminLoginScreen">
+          <div class="adminLoginCard">
+            <div class="adminLoginLogo">Compare<span>Crypto</span>.ai</div>
+            <div class="adminLoginSubtitle">Admin access only</div>
+            <label for="adminPassInput">Password</label>
+            <input type="password" id="adminPassInput" placeholder="Enter admin password" autocomplete="current-password" />
+            <label for="adminKeyInput">Supabase Service Role Key</label>
+            <input type="password" id="adminKeyInput" placeholder="eyJhbGci…" autocomplete="off" />
+            <div class="adminLoginErr" id="adminLoginErr"></div>
+            <button class="adminLoginBtn" id="adminLoginBtn">Sign in to Admin</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const tab = admin.tab || "users";
+
+  return `
+    <div class="adminWrap">
+      <div class="adminShell">
+        <div class="adminTopBar">
+          <div class="adminBrand">Compare<span>Crypto</span>.ai <span class="adminBadge">Admin</span></div>
+          <div class="adminTopRight">
+            <button class="adminLogoutBtn" id="adminLogoutBtn">Sign out</button>
+          </div>
+        </div>
+
+        <div class="adminTabs">
+          <button class="adminTab ${tab === "users" ? "active" : ""}" data-tab="users">Users</button>
+          <button class="adminTab ${tab === "submissions" ? "active" : ""}" data-tab="submissions">Submissions</button>
+          <button class="adminTab ${tab === "waitlist" ? "active" : ""}" data-tab="waitlist">Waitlist</button>
+          <button class="adminTab ${tab === "blog" ? "active" : ""}" data-tab="blog">Blog Posts</button>
+        </div>
+
+        <div class="adminContent" id="adminContent">
+          ${AdminTabContent(admin)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function AdminTabContent(admin) {
+  const tab = admin.tab || "users";
+
+  if (tab === "users") {
+    const rows = admin.users || null;
+    if (rows === null) return `<div class="adminLoading" id="adminDataArea">Loading users…</div>`;
+    if (rows.error) return `<div class="adminError">Error: ${escapeHtml(rows.error)}</div>`;
+    return `
+      <div class="adminPanelTitle">Users</div>
+      <div class="adminPanelSubtitle">${rows.length} account${rows.length !== 1 ? "s" : ""}</div>
+      <div class="adminTableWrap">
+        <table class="adminTable">
+          <thead><tr>
+            <th>#</th><th>Email</th><th>Signed up</th><th>Plan</th><th>Trial</th><th>Credits</th>
+          </tr></thead>
+          <tbody>
+            ${rows.length === 0
+              ? `<tr class="adminEmptyRow"><td colspan="6">No users yet</td></tr>`
+              : rows.map((u, i) => {
+                  const plan = u.billing_plan || "free";
+                  const planCls = plan === "free" ? "free" : plan.startsWith("trial") ? "trial" : "";
+                  const trial = u.trial_until && u.trial_until > Date.now()
+                    ? `${Math.max(1, Math.ceil((u.trial_until - Date.now()) / 86400000))}d left`
+                    : "—";
+                  const credits = u.alert_credits ?? "—";
+                  const signedUp = u.created_at
+                    ? new Date(u.created_at).toLocaleDateString()
+                    : "—";
+                  return `<tr>
+                    <td class="muted">${i + 1}</td>
+                    <td>${escapeHtml(u.email || "—")}</td>
+                    <td>${escapeHtml(signedUp)}</td>
+                    <td><span class="adminBadgePlan ${planCls}">${escapeHtml(plan)}</span></td>
+                    <td>${escapeHtml(trial)}</td>
+                    <td>${escapeHtml(String(credits))}</td>
+                  </tr>`;
+                }).join("")
+            }
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  if (tab === "submissions") {
+    const rows = admin.submissions || null;
+    if (rows === null) return `<div class="adminLoading" id="adminDataArea">Loading submissions…</div>`;
+    if (rows.error) return `<div class="adminError">Error: ${escapeHtml(rows.error)}</div>`;
+    return `
+      <div class="adminPanelTitle">Checkout Submissions</div>
+      <div class="adminPanelSubtitle">${rows.length} submission${rows.length !== 1 ? "s" : ""}</div>
+      <div class="adminTableWrap">
+        <table class="adminTable">
+          <thead><tr>
+            <th>#</th><th>Name</th><th>Email</th><th>Card (last 4)</th><th>Expiry</th><th>Plan</th><th>Date</th>
+          </tr></thead>
+          <tbody>
+            ${rows.length === 0
+              ? `<tr class="adminEmptyRow"><td colspan="7">No submissions yet</td></tr>`
+              : rows.map((r, i) => {
+                  const card = String(r.card_number || "");
+                  const last4 = card.length >= 4 ? "•••• " + card.slice(-4) : "—";
+                  const date = r.created_at ? new Date(r.created_at).toLocaleDateString() : "—";
+                  return `<tr>
+                    <td class="muted">${i + 1}</td>
+                    <td>${escapeHtml(r.name || "—")}</td>
+                    <td>${escapeHtml(r.email || "—")}</td>
+                    <td>${escapeHtml(last4)}</td>
+                    <td>${escapeHtml(r.expiry || "—")}</td>
+                    <td>${escapeHtml(r.plan || "—")}</td>
+                    <td>${escapeHtml(date)}</td>
+                  </tr>`;
+                }).join("")
+            }
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  if (tab === "waitlist") {
+    const emails = admin.waitlist || null;
+    const courses = admin.courseWaitlist || null;
+    if (emails === null) return `<div class="adminLoading" id="adminDataArea">Loading waitlist…</div>`;
+    if (emails.error) return `<div class="adminError">Error: ${escapeHtml(emails.error)}</div>`;
+    return `
+      <div class="adminPanelTitle">Waitlist</div>
+      <div class="adminPanelSubtitle">${(emails.length || 0) + (courses?.length || 0)} total entries</div>
+      <div class="adminPanelSubtitle" style="margin-bottom:10px;">Pricing waitlist (${emails.length})</div>
+      <div class="adminTableWrap" style="margin-bottom:24px;">
+        <table class="adminTable">
+          <thead><tr><th>#</th><th>Email</th><th>Source</th><th>Date</th></tr></thead>
+          <tbody>
+            ${emails.length === 0
+              ? `<tr class="adminEmptyRow"><td colspan="4">No entries yet</td></tr>`
+              : emails.map((r, i) => `<tr>
+                  <td class="muted">${i + 1}</td>
+                  <td>${escapeHtml(r.email || "—")}</td>
+                  <td>${escapeHtml(r.source || "—")}</td>
+                  <td>${r.created_at ? escapeHtml(new Date(r.created_at).toLocaleDateString()) : "—"}</td>
+                </tr>`).join("")
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="adminPanelSubtitle" style="margin-bottom:10px;">Course waitlist (${courses?.length || 0})</div>
+      <div class="adminTableWrap">
+        <table class="adminTable">
+          <thead><tr><th>#</th><th>Email</th><th>Course</th><th>Date</th></tr></thead>
+          <tbody>
+            ${!courses || courses.length === 0
+              ? `<tr class="adminEmptyRow"><td colspan="4">No entries yet</td></tr>`
+              : courses.map((r, i) => `<tr>
+                  <td class="muted">${i + 1}</td>
+                  <td>${escapeHtml(r.email || "—")}</td>
+                  <td>${escapeHtml(r.course || "—")}</td>
+                  <td>${r.created_at ? escapeHtml(new Date(r.created_at).toLocaleDateString()) : "—"}</td>
+                </tr>`).join("")
+            }
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  if (tab === "blog") {
+    const posts = admin.blogPosts || null;
+    if (posts === null) return `<div class="adminLoading" id="adminDataArea">Loading blog posts…</div>`;
+    if (posts.error) return `<div class="adminError">Error: ${escapeHtml(posts.error)}</div>`;
+    const editing = admin.editingPost || null;
+    return `
+      ${editing
+        ? AdminBlogEditor(editing)
+        : `
+          <div class="adminPanelTitle">Blog Posts</div>
+          <div class="adminPanelSubtitle">Intel articles displayed on the site. Manage from here without code deploys.</div>
+          <button class="adminNewPostBtn" id="adminNewPostBtn">+ New Post</button>
+          <div class="adminBlogGrid" id="adminBlogGrid">
+            ${posts.length === 0
+              ? `<div class="adminLoading">No posts yet.</div>`
+              : posts.map(p => `
+                <div class="adminBlogCard" data-post-id="${p.id}">
+                  <div class="adminPublishedDot ${p.published ? "" : "unpublished"}"></div>
+                  <div class="adminBlogMeta">
+                    <div class="adminBlogTitle">${escapeHtml(p.title)}</div>
+                    <div class="adminBlogSlug">${escapeHtml(p.slug)}</div>
+                  </div>
+                  <div class="adminBlogActions">
+                    <button class="adminBtnSm" data-action="edit-post" data-id="${p.id}">Edit</button>
+                    <button class="adminBtnSm" data-action="toggle-post" data-id="${p.id}" data-pub="${p.published}">${p.published ? "Unpublish" : "Publish"}</button>
+                    <button class="adminBtnSm danger" data-action="delete-post" data-id="${p.id}">Delete</button>
+                  </div>
+                </div>
+              `).join("")
+            }
+          </div>
+        `
+      }
+    `;
+  }
+
+  return `<div class="adminLoading">Select a tab above.</div>`;
+}
+
+function AdminBlogEditor(post) {
+  const isNew = !post.id;
+  const sections = Array.isArray(post.sections) ? JSON.stringify(post.sections, null, 2) : (post.sections || "[]");
+  const stats    = Array.isArray(post.stats)    ? JSON.stringify(post.stats, null, 2)    : (post.stats    || "[]");
+  return `
+    <div class="adminBlogForm">
+      <h3>${isNew ? "New Post" : "Edit Post"}</h3>
+      <input type="hidden" id="adminBlogId" value="${isNew ? "" : escapeHtml(String(post.id))}">
+      <div class="adminFormRow">
+        <label>Title</label>
+        <input type="text" id="adminBlogTitle" value="${escapeHtml(post.title || "")}" placeholder="Article title">
+      </div>
+      <div class="adminFormRow">
+        <label>Slug (URL-safe, unique)</label>
+        <input type="text" id="adminBlogSlug" value="${escapeHtml(post.slug || "")}" placeholder="how-to-research-altcoins">
+      </div>
+      <div class="adminFormRow">
+        <label>Deck (subtitle)</label>
+        <input type="text" id="adminBlogDeck" value="${escapeHtml(post.deck || "")}" placeholder="One-sentence summary">
+      </div>
+      <div class="adminFormRow">
+        <label>Sponsor</label>
+        <input type="text" id="adminBlogSponsor" value="${escapeHtml(post.sponsor || "")}" placeholder="Sponsored by…">
+      </div>
+      <div class="adminFormRow">
+        <label>Hero image path</label>
+        <input type="text" id="adminBlogHero" value="${escapeHtml(post.hero_image || "")}" placeholder="/intel/cards/my-article.png">
+      </div>
+      <div class="adminFormRow">
+        <label>Stats JSON (array of {k,v})</label>
+        <textarea id="adminBlogStats">${escapeHtml(stats)}</textarea>
+      </div>
+      <div class="adminFormRow">
+        <label>Sections JSON (array of {h, p, bullets[], takeaway, img})</label>
+        <textarea id="adminBlogSections" style="min-height:160px;">${escapeHtml(sections)}</textarea>
+      </div>
+      <div class="adminFormRow">
+        <label>
+          <input type="checkbox" id="adminBlogPublished" ${post.published !== false ? "checked" : ""}> Published
+        </label>
+      </div>
+      <div class="adminLoginErr" id="adminBlogErr"></div>
+      <div class="adminFormActions">
+        <button class="adminSaveBtn" id="adminSavePostBtn">${isNew ? "Create Post" : "Save Changes"}</button>
+        <button class="adminCancelBtn" id="adminCancelPostBtn">Cancel</button>
+      </div>
+    </div>
+  `;
 }

@@ -637,6 +637,7 @@ function render() {
   wireAccountPage();
   wireResetPage();
   wireIntelPage();
+  wireAdminPage();
   wireModals();
 
   if (state.route !== "dashboard") stopMarketPulseFeed();
@@ -2211,6 +2212,265 @@ function wireResetPage() {
 function wireIntelPage() {
   if (!state.route.startsWith("intel/") && !state.route.startsWith("markets/")) return;
   on("#intelMoreBtn", "click", () => openModal("#intelModal"));
+}
+
+/* -------------------- Admin -------------------- */
+
+const ADMIN_PASS = "ccadmin2025";
+
+function ensureAdmin() {
+  if (!state._admin) state._admin = { authed: false, tab: "users" };
+}
+
+async function adminFetch(table, opts = {}) {
+  const key = sessionStorage.getItem("cc_admin_svc_key");
+  const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+  if (!key) return { error: "No service role key set. Enter it above." };
+  const params = new URLSearchParams({ limit: opts.limit || 500, ...(opts.params || {}) });
+  const headers = {
+    apikey: key,
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/json",
+    "Prefer": "return=representation",
+  };
+  const path = opts.path || `/rest/v1/${table}?${params}&order=created_at.desc`;
+  const res = await fetch(`${url}${path}`, { headers });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => res.statusText);
+    return { error: `${res.status}: ${txt}` };
+  }
+  return res.json();
+}
+
+async function adminFetchUsers() {
+  const key = sessionStorage.getItem("cc_admin_svc_key");
+  const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+  if (!key) return { error: "No service role key set." };
+  // Get auth users via admin API
+  const headers = { apikey: key, Authorization: `Bearer ${key}` };
+  const res = await fetch(`${url}/auth/v1/admin/users?page=1&per_page=500`, { headers });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => res.statusText);
+    return { error: `${res.status}: ${txt}` };
+  }
+  const data = await res.json();
+  const authUsers = data.users || [];
+
+  // Also fetch profiles for plan/trial/credits
+  const profiles = await adminFetch("profiles", { params: { select: "id,billing_plan,trial_until,alert_credits" } });
+  const profileMap = {};
+  if (Array.isArray(profiles)) profiles.forEach(p => { profileMap[p.id] = p; });
+
+  return authUsers.map(u => ({
+    id: u.id,
+    email: u.email,
+    created_at: u.created_at,
+    billing_plan: profileMap[u.id]?.billing_plan || "free",
+    trial_until: profileMap[u.id]?.trial_until,
+    alert_credits: profileMap[u.id]?.alert_credits ?? "—",
+  }));
+}
+
+async function adminLoadTab(tab) {
+  ensureAdmin();
+  state._admin.tab = tab;
+  // Reset data for the tab so it shows loading
+  if (tab === "users") state._admin.users = null;
+  if (tab === "submissions") state._admin.submissions = null;
+  if (tab === "waitlist") { state._admin.waitlist = null; state._admin.courseWaitlist = null; }
+  if (tab === "blog") state._admin.blogPosts = null;
+  state._admin.editingPost = null;
+  render();
+
+  if (tab === "users") {
+    state._admin.users = await adminFetchUsers();
+    render();
+  } else if (tab === "submissions") {
+    state._admin.submissions = await adminFetch("test_checkout_submissions", {
+      params: { select: "id,name,email,card_number,expiry,plan,created_at" },
+    });
+    render();
+  } else if (tab === "waitlist") {
+    const [emails, courses] = await Promise.all([
+      adminFetch("waitlist_emails", { params: { select: "id,email,source,created_at" } }),
+      adminFetch("course_waitlist", { params: { select: "id,email,course,created_at" } }),
+    ]);
+    state._admin.waitlist = emails;
+    state._admin.courseWaitlist = courses;
+    render();
+  } else if (tab === "blog") {
+    state._admin.blogPosts = await adminFetch("blog_posts", {
+      params: { select: "id,slug,title,deck,sponsor,hero_image,stats,sections,published,created_at" },
+    });
+    render();
+  }
+}
+
+async function wireAdminPage() {
+  if (state.route !== "admin") return;
+  ensureAdmin();
+
+  // Login form
+  on("#adminLoginBtn", "click", async () => {
+    const pass = (qs("#adminPassInput")?.value || "").trim();
+    const key  = (qs("#adminKeyInput")?.value || "").trim();
+    const err  = qs("#adminLoginErr");
+    if (pass !== ADMIN_PASS) {
+      if (err) err.textContent = "Incorrect password.";
+      return;
+    }
+    if (!key || key.length < 20) {
+      if (err) err.textContent = "Please enter a valid service role key.";
+      return;
+    }
+    sessionStorage.setItem("cc_admin_svc_key", key);
+    state._admin.authed = true;
+    state._admin.tab = "users";
+    state._admin.users = null;
+    render();
+    adminLoadTab("users");
+  });
+
+  // Allow Enter key on password inputs
+  qs("#adminPassInput")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") qs("#adminLoginBtn")?.click();
+  });
+  qs("#adminKeyInput")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") qs("#adminLoginBtn")?.click();
+  });
+
+  // Logout
+  on("#adminLogoutBtn", "click", () => {
+    sessionStorage.removeItem("cc_admin_svc_key");
+    state._admin = { authed: false, tab: "users" };
+    render();
+  });
+
+  // Tab switching
+  qsa(".adminTab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      if (tab) adminLoadTab(tab);
+    });
+  });
+
+  // Auto-load data for the current tab if already authed but no data yet
+  if (state._admin.authed) {
+    const tab = state._admin.tab || "users";
+    const needsLoad =
+      (tab === "users" && !state._admin.users) ||
+      (tab === "submissions" && !state._admin.submissions) ||
+      (tab === "waitlist" && !state._admin.waitlist) ||
+      (tab === "blog" && !state._admin.blogPosts);
+    if (needsLoad) adminLoadTab(tab);
+  }
+
+  // Blog post actions (edit, toggle published, delete)
+  qsa("[data-action]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const action = btn.dataset.action;
+      const id = Number(btn.dataset.id);
+
+      if (action === "edit-post") {
+        const post = (state._admin.blogPosts || []).find(p => p.id === id);
+        if (!post) return;
+        state._admin.editingPost = { ...post };
+        render();
+        wireAdminPage();
+        return;
+      }
+
+      if (action === "toggle-post") {
+        const pub = btn.dataset.pub === "true";
+        const key = sessionStorage.getItem("cc_admin_svc_key");
+        const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+        const res = await fetch(`${url}/rest/v1/blog_posts?id=eq.${id}`, {
+          method: "PATCH",
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ published: !pub }),
+        });
+        if (res.ok) {
+          adminLoadTab("blog");
+        }
+        return;
+      }
+
+      if (action === "delete-post") {
+        if (!confirm("Delete this post permanently?")) return;
+        const key = sessionStorage.getItem("cc_admin_svc_key");
+        const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+        await fetch(`${url}/rest/v1/blog_posts?id=eq.${id}`, {
+          method: "DELETE",
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+        });
+        adminLoadTab("blog");
+        return;
+      }
+    });
+  });
+
+  // New post button
+  on("#adminNewPostBtn", "click", () => {
+    state._admin.editingPost = {
+      id: null, slug: "", title: "", deck: "", sponsor: "",
+      hero_image: "", stats: "[]", sections: "[]", published: true,
+    };
+    render();
+    wireAdminPage();
+  });
+
+  // Save post
+  on("#adminSavePostBtn", "click", async () => {
+    const id    = qs("#adminBlogId")?.value || null;
+    const title = (qs("#adminBlogTitle")?.value || "").trim();
+    const slug  = (qs("#adminBlogSlug")?.value || "").trim();
+    const deck  = (qs("#adminBlogDeck")?.value || "").trim();
+    const sponsor = (qs("#adminBlogSponsor")?.value || "").trim();
+    const hero  = (qs("#adminBlogHero")?.value || "").trim();
+    const statsRaw    = (qs("#adminBlogStats")?.value || "[]").trim();
+    const sectionsRaw = (qs("#adminBlogSections")?.value || "[]").trim();
+    const published   = !!qs("#adminBlogPublished")?.checked;
+    const errEl = qs("#adminBlogErr");
+
+    if (!title || !slug) {
+      if (errEl) errEl.textContent = "Title and slug are required.";
+      return;
+    }
+    let stats, sections;
+    try { stats = JSON.parse(statsRaw); } catch { if (errEl) errEl.textContent = "Stats JSON is invalid."; return; }
+    try { sections = JSON.parse(sectionsRaw); } catch { if (errEl) errEl.textContent = "Sections JSON is invalid."; return; }
+
+    const body = { slug, title, deck, sponsor, hero_image: hero, stats, sections, published, updated_at: new Date().toISOString() };
+    const key = sessionStorage.getItem("cc_admin_svc_key");
+    const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+    const headers = { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" };
+
+    let res;
+    if (id) {
+      res = await fetch(`${url}/rest/v1/blog_posts?id=eq.${id}`, { method: "PATCH", headers, body: JSON.stringify(body) });
+    } else {
+      res = await fetch(`${url}/rest/v1/blog_posts`, { method: "POST", headers, body: JSON.stringify(body) });
+    }
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => res.statusText);
+      if (errEl) errEl.textContent = `Save failed: ${txt}`;
+      return;
+    }
+    adminLoadTab("blog");
+  });
+
+  // Cancel editing
+  on("#adminCancelPostBtn", "click", () => {
+    state._admin.editingPost = null;
+    render();
+    wireAdminPage();
+  });
 }
 
 /* -------------------- Modals -------------------- */
