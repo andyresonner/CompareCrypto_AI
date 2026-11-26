@@ -3266,7 +3266,7 @@ export function AdminPage(state) {
 
   return `
     ${TopNav(state)}
-    <div class="pageWrap" style="padding-top:24px;padding-bottom:60px;">
+    <div class="pageWrap" style="padding:24px 24px 60px;max-width:1100px;margin:0 auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
         <div>
           <div style="font-size:20px;font-weight:700;">Admin Dashboard</div>

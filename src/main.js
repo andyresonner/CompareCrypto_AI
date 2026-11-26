@@ -2217,14 +2217,16 @@ function wireIntelPage() {
 /* -------------------- Admin -------------------- */
 
 const ADMIN_PASS = "admin";
+const ADMIN_SB_URL = "https://moxbjxnxdainqmlqjrib.supabase.co";
 
 function ensureAdmin() {
   if (!state._admin) state._admin = { authed: false, tab: "users" };
+  if (!state._admin.authed) state._admin.tab = "users";
 }
 
 async function adminFetch(table, opts = {}) {
   const key = sessionStorage.getItem("cc_admin_svc_key");
-  const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+  const url = ADMIN_SB_URL;
   if (!key) return { error: "No service role key set. Enter it above." };
   const params = new URLSearchParams({ limit: opts.limit || 500, ...(opts.params || {}) });
   const headers = {
@@ -2244,7 +2246,7 @@ async function adminFetch(table, opts = {}) {
 
 async function adminFetchUsers() {
   const key = sessionStorage.getItem("cc_admin_svc_key");
-  const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+  const url = ADMIN_SB_URL;
   if (!key) return { error: "No service role key set." };
   // Get auth users via admin API
   const headers = { apikey: key, Authorization: `Bearer ${key}` };
@@ -2375,7 +2377,7 @@ async function wireAdminPage() {
       if (action === "toggle-post") {
         const pub = btn.dataset.pub === "true";
         const key = sessionStorage.getItem("cc_admin_svc_key");
-        const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+        const url = ADMIN_SB_URL;
         const res = await fetch(`${url}/rest/v1/blog_posts?id=eq.${id}`, {
           method: "PATCH",
           headers: {
@@ -2395,7 +2397,7 @@ async function wireAdminPage() {
       if (action === "delete-post") {
         if (!confirm("Delete this post permanently?")) return;
         const key = sessionStorage.getItem("cc_admin_svc_key");
-        const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+        const url = ADMIN_SB_URL;
         await fetch(`${url}/rest/v1/blog_posts?id=eq.${id}`, {
           method: "DELETE",
           headers: { apikey: key, Authorization: `Bearer ${key}` },
@@ -2439,7 +2441,7 @@ async function wireAdminPage() {
 
     const body = { slug, title, deck, sponsor, hero_image: hero, stats, sections, published, updated_at: new Date().toISOString() };
     const key = sessionStorage.getItem("cc_admin_svc_key");
-    const url = "https://wmuxvjrsusnscfmblcfi.supabase.co";
+    const url = ADMIN_SB_URL;
     const headers = { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json", Prefer: "return=minimal" };
 
     let res;
