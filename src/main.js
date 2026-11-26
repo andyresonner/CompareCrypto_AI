@@ -2313,17 +2313,17 @@ async function wireAdminPage() {
   // Login form
   on("#adminLoginBtn", "click", async () => {
     const pass = (qs("#adminPassInput")?.value || "").trim();
-    const key  = (qs("#adminKeyInput")?.value || "").trim();
     const err  = qs("#adminLoginErr");
     if (pass !== ADMIN_PASS) {
       if (err) err.textContent = "Incorrect password.";
       return;
     }
-    if (!key || key.length < 20) {
-      if (err) err.textContent = "Please enter a valid service role key.";
+    const envKey = import.meta.env.VITE_SUPABASE_SERVICE_KEY || "";
+    if (!envKey || envKey.length < 20) {
+      if (err) err.textContent = "Service key not configured. Add VITE_SUPABASE_SERVICE_KEY to Vercel env vars.";
       return;
     }
-    sessionStorage.setItem("cc_admin_svc_key", key);
+    sessionStorage.setItem("cc_admin_svc_key", envKey);
     state._admin.authed = true;
     state._admin.tab = "users";
     state._admin.users = null;
@@ -2331,11 +2331,7 @@ async function wireAdminPage() {
     adminLoadTab("users");
   });
 
-  // Allow Enter key on password inputs
   qs("#adminPassInput")?.addEventListener("keydown", e => {
-    if (e.key === "Enter") qs("#adminLoginBtn")?.click();
-  });
-  qs("#adminKeyInput")?.addEventListener("keydown", e => {
     if (e.key === "Enter") qs("#adminLoginBtn")?.click();
   });
 

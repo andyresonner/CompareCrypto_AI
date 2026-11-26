@@ -3255,15 +3255,6 @@ export function AdminPage(state) {
               style="width:100%;background:var(--bg2,#1a1d24);border:1px solid var(--border,#2a2d35);border-radius:8px;padding:10px 12px;font-size:14px;color:inherit;box-sizing:border-box;outline:none;" />
           </div>
 
-          <div style="margin-bottom:6px;">
-            <div class="muted small" style="margin-bottom:4px;font-weight:600;">Supabase Secret Key</div>
-            <div class="muted" style="font-size:11px;margin-bottom:6px;">
-              Go to Supabase → Project Settings → API Keys → click <b>View legacy API keys</b> → copy <b>service_role</b> (starts with eyJ…)
-            </div>
-            <input type="password" id="adminKeyInput" placeholder="eyJhbGci…"
-              style="width:100%;background:var(--bg2,#1a1d24);border:1px solid var(--border,#2a2d35);border-radius:8px;padding:10px 12px;font-size:14px;color:inherit;box-sizing:border-box;outline:none;" />
-          </div>
-
           <div style="color:#f06a6a;font-size:13px;min-height:18px;margin:10px 0 14px;" id="adminLoginErr"></div>
           <button class="cta" id="adminLoginBtn" style="width:100%;">Sign in</button>
         </div>
